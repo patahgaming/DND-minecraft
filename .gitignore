@@ -1,0 +1,37 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Minecraft Server
+server/
+!server/plugins/
+
+# Java
+*.class
+*.jar
+!src/**
+*.log
+
+# Plugin runtime data (generated at runtime)
+# (keep template YAML in src/main/resources/data/)
