@@ -1,0 +1,8 @@
+poi_id: forest_cave
+name: "Goa Hutan Gelap"
+biome: forest
+bbox:
+  x1: 100
+  z1: 200
+  x2: 150
+  z2: 250

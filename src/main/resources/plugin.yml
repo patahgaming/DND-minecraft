@@ -1,0 +1,17 @@
+name: DndPlugin
+version: '${version}'
+main: id.patahgaming.dndplugin.DndPlugin
+api-version: '1.21'
+author: patahgaming
+description: DnD AI System - Minecraft-native interface dengan AI narator/NPC (DeepSeek)
+
+commands:
+  atk:
+    description: Serangan saat giliran combat aktif
+    usage: /atk <mob_id>
+  roll:
+    description: Roll dice untuk tindakan yang membutuhkan check
+    usage: /roll <jenis_tindakan>
+  talk:
+    description: Mulai dialog dengan NPC penting
+    usage: /talk <npc_id>

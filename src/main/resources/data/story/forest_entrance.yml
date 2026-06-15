@@ -1,0 +1,16 @@
+node_id: forest_entrance
+trigger: ALL_PLAYERS_IN_BBOX
+bbox:
+  x1: 100
+  z1: 200
+  x2: 150
+  z2: 250
+narrative: >
+  Party tiba di gerbang hutan tua. Pepohonan tinggi menutupi cahaya matahari,
+  dan suara binatang malam mulai terdengar meski hari belum gelap. Di kejauhan,
+  sebuah mulut goa tampak menganga gelap di antara akar-akar raksasa.
+choices:
+  - id: enter_cave
+    next_node: cave_dialogue
+  - id: avoid_cave
+    next_node: forest_path_alt
