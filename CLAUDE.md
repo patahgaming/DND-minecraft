@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dungeons & Dragons game embedded in Minecraft as a single Paper server plugin. Minecraft is the sole interface — no web frontend, no separate services. AI (DeepSeek) acts as narrator and drives NPC dialogue. Cross-play via Geyser/Floodgate (Java + Bedrock).
 
+## Versioning Rule
+
+**Setiap ada update code, bump digit terakhir version di `pom.xml`.**
+
+Format: `MAJOR.MINOR.PATCH.BUILD` — contoh `1.0.0.4` → `1.0.0.5` → `1.0.0.6`
+
+Steps:
+
+1. Bump `<version>` di `pom.xml` (digit terakhir +1)
+2. `mvn package -DskipTests`
+3. Copy JAR baru ke `server/plugins/`, hapus JAR versi lama
+4. Commit dengan prefix `"Bump v1.0.0.X — ..."`
+
 ## Reference: SKILL.md
 
 [SKILL.md](SKILL.md) is the primary design document. Read it before any significant work — it defines every subsystem, the data model, and all architectural decisions. This CLAUDE.md summarizes the essentials; SKILL.md is the source of truth.
