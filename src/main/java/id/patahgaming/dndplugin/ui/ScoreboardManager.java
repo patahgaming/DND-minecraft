@@ -3,6 +3,7 @@ package id.patahgaming.dndplugin.ui;
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import net.kyori.adventure.text.Component;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -56,8 +57,13 @@ public class ScoreboardManager {
     private static void populate(DndPlugin plugin, Player player, Objective objective) {
         PlayerDataStore store = plugin.getPlayerDataStore();
 
+        // Gunakan Attribute API langsung — getMaxHealth() bisa return base 20
+        // meskipun attribute sudah di-modify via /attribute command
+        double maxHealth = player.getAttribute(Attribute.MAX_HEALTH) != null
+                ? player.getAttribute(Attribute.MAX_HEALTH).getValue()
+                : player.getMaxHealth();
         int hp = (int) player.getHealth();
-        int maxHp = (int) player.getMaxHealth();
+        int maxHp = (int) maxHealth;
         int level = store.getLevel(player);
 
         int line = 10;

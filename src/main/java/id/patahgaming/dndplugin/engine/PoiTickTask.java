@@ -2,7 +2,7 @@ package id.patahgaming.dndplugin.engine;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
-import net.kyori.adventure.text.Component;
+import id.patahgaming.dndplugin.ui.ScoreboardManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -39,6 +39,11 @@ public class PoiTickTask extends BukkitRunnable {
     public void run() {
         Collection<? extends Player> online = Bukkit.getOnlinePlayers();
         if (online.isEmpty()) return;
+
+        // Refresh scoreboard semua player — sync HP + max HP real-time
+        for (Player p : online) {
+            ScoreboardManager.refresh(plugin, p);
+        }
 
         String currentPartyNode = plugin.getPlayerDataStore().getPartyCurrentNode();
         List<StoryTreeStore.StoryNode> nodes = plugin.getStoryTreeStore().getAllWithBboxTrigger();
