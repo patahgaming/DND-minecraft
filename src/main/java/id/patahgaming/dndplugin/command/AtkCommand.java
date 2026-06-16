@@ -2,6 +2,7 @@ package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.engine.combat.CombatEngine;
+import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
 import org.bukkit.Bukkit;
@@ -82,24 +83,47 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Select action di TurnManager
+        // Select action
         tm.selectAction(player);
 
-        // Attack resolution
+        // Build diceExpr + resolve attack
+        int strMod = plugin.getPlayerDataStore().getAbilityModifier(player, "str");
+        int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");
+        int profBonus = CombatEngine.proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
+
+        String diceExpr;
         CombatEngine.AttackResult result;
         if (melee) {
+            diceExpr = "d20+" + (strMod + profBonus);
             result = CombatEngine.resolveMeleeAttack(plugin, player, target);
         } else {
+            diceExpr = "d20+" + (dexMod + profBonus);
             result = CombatEngine.resolveRangedAttack(plugin, player, target);
         }
+
+        // PendingRoll: set ATTACK → player /roll confirm
+        PendingRoll pr = new PendingRoll();
+        pr.rollType = PendingRoll.RollType.ATTACK;
+        pr.diceExpr = diceExpr;
+        pr.targetId = target.getUniqueId().toString().substring(0, 8);
+        pr.promptMsg = (melee ? "§7[Melee] " : "§7[Ranged] ") + player.getName()
+                + " menyerang " + target.getName() + "! Ketik §e/roll";
+        PendingRoll.set(player, pr);
+
+        // Prompt
+        player.sendMessage(pr.promptMsg + " (" + diceExpr + " vs AC " + result.targetAC + ")");
+
+        // Auto-resolve for now (full manual two-step later)
+        tm.resolveAction();
 
         // Apply damage
         int actualDmg = 0;
         if (result.hit) {
             actualDmg = CombatEngine.applyDamage(target, result.totalDamage, result.damageType);
         }
+        PendingRoll.clear(player);
 
-        // Title display
+        // Title + broadcast
         String mainText = result.hit
                 ? (result.crit ? "§e§lCRIT " + result.totalAttack : "§aHit! " + result.totalAttack)
                 : "§7Miss! " + result.totalAttack;
@@ -107,24 +131,18 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
                 target.getName() + " §7[AC:" + result.targetAC + "]";
         TitleDisplay.showCombatResult(player, mainText, subText);
 
-        // Combat log broadcast
-        String atkType = melee ? "§7[Melee]" : "§7[Ranged]";
         String hitMsg = result.hit
-                ? "§aHIT §7| " + atkType + " §7→ DMG: §c" + actualDmg
-                        + " §7(" + result.damageType + ")"
-                : "§7MISS §7| " + atkType + " §7→ AC " + result.targetAC + " too high";
+                ? "§aHIT §7→ DMG: §c" + actualDmg + " §7(" + result.damageType + ")"
+                : "§7MISS §7→ AC " + result.targetAC + " too high";
         Bukkit.broadcastMessage("§c[Combat]§r " + player.getName() + " menyerang "
-                + target.getName() + "! §7[d20:" + result.attackRoll + "+" + result.attackBonus
-                + "=" + result.totalAttack + " vs AC:" + result.targetAC + "] " + hitMsg);
+                + target.getName() + "! §7[" + diceExpr + "=" + result.totalAttack
+                + " vs AC:" + result.targetAC + "] " + hitMsg);
 
-        // Cek target mati
+        // Kill check
         if (target.getHealth() <= 0) {
             Bukkit.broadcastMessage("§c§l" + target.getName() + " has been slain!");
             tm.removeParticipant(target);
         }
-
-        // Resolve → next turn
-        tm.resolveAction();
         return true;
     }
 

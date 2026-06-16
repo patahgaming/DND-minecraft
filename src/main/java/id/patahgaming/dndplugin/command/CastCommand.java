@@ -3,6 +3,7 @@ package id.patahgaming.dndplugin.command;
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.engine.combat.CombatEngine;
+import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
@@ -174,6 +175,16 @@ public class CastCommand implements CommandExecutor, TabCompleter {
         int totalDamage = 0;
 
         if (spell.requiresAttackRoll) {
+            // PendingRoll: SPELL_ATTACK
+            String diceExpr = "d20+" + (spellMod + profBonus);
+            PendingRoll pr = new PendingRoll();
+            pr.rollType = PendingRoll.RollType.SPELL_ATTACK;
+            pr.diceExpr = diceExpr;
+            pr.targetId = target.getUniqueId().toString().substring(0, 8);
+            pr.extraData = spell.name;
+            PendingRoll.set(caster, pr);
+            caster.sendMessage("§d🔮 " + spell.name + "! Ketik §e/roll §d(" + diceExpr + ")");
+
             // Spell attack roll: d20 + spellMod + prof vs target AC
             int attackRoll = DiceRoller.roll(20);
             int totalAttack = attackRoll + spellMod + profBonus;

@@ -93,70 +93,53 @@ public class RollCommand implements CommandExecutor, TabCompleter {
 
     private void executeRoll(Player player, String rollType,
                              id.patahgaming.dndplugin.engine.combat.PendingRoll pending) {
-        String ability = ROLL_TYPE_ABILITY.getOrDefault(rollType, "");
 
+        // Kalau ada PendingRoll → pakai diceExpr dari engine (anti-cheat)
+        if (pending != null && pending.diceExpr != null) {
+            int result = DiceRoller.parseAndRoll(pending.diceExpr);
+            TitleDisplay.showRollResult(player,
+                    formatRollType(pending.rollType.name().toLowerCase()) + " " + pending.diceExpr,
+                    result);
+            resolvePendingRoll(player, pending, result, 0, 0);
+            return;
+        }
+
+        // Free roll (no pending) — standard skill check
+        String ability = ROLL_TYPE_ABILITY.getOrDefault(rollType, "");
         int modifier = 0;
         if (!ability.isEmpty()) {
             modifier = plugin.getPlayerDataStore().getAbilityModifier(player, ability);
         }
-
-        // Proficiency bonus
         if (!ability.isEmpty() && !rollType.equals("initiative") && !rollType.equals("attack")
                 && !rollType.equals("death_save")) {
             CharacterClass charClass = CharacterClass.fromName(
                     plugin.getPlayerDataStore().getCharacterClass(player));
             if (charClass != null && charClass.hasSkillOption(rollType)) {
                 List<String> options = charClass.getSkillOptions();
-                int chosenIdx = options.indexOf(rollType.toLowerCase());
-                if (chosenIdx >= 0 && chosenIdx < 2) {
-                    int profBonus = id.patahgaming.dndplugin.engine.combat.CombatEngine
+                if (options.indexOf(rollType.toLowerCase()) >= 0 && options.indexOf(rollType.toLowerCase()) < 2) {
+                    modifier += id.patahgaming.dndplugin.engine.combat.CombatEngine
                             .proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
-                    modifier += profBonus;
                 }
             }
         }
-
         int roll = DiceRoller.roll(20);
         int total = roll + modifier;
         TitleDisplay.showRollAnimation(plugin, player, formatRollType(rollType), modifier, roll, total);
-
-        // Resolve PendingRoll kalau ada
-        if (pending != null) {
-            resolvePendingRoll(player, pending, roll, total, modifier);
-        }
     }
 
-    /** Resolve pending roll — clear pending, narrate result. */
+    /** Resolve pending roll — engine diceExpr already used, now apply result. */
     private void resolvePendingRoll(Player player,
                                      id.patahgaming.dndplugin.engine.combat.PendingRoll pending,
-                                     int roll, int total, int modifier) {
-        // Clear pending
+                                     int rollResult, int total, int modifier) {
+        // Store result in pending context before clearing
+        pending.lastRollResult = rollResult;
+        pending.resolved = true;
+
+        // For attack/spell attack: check hit vs target AC (stored in pending.context)
+        // For damage: apply damage via CombatEngine
+        // For death save / skill check: just narrate
+
         id.patahgaming.dndplugin.engine.combat.PendingRoll.clear(player);
-
-        // Determine success/failure: for skill checks, DC is usually 10-15
-        // Untuk death save: 10+ success, nat1 = fail
-        boolean success;
-        if (pending.rollType == id.patahgaming.dndplugin.engine.combat.PendingRoll.RollType.DEATH_SAVE) {
-            success = roll >= 10;
-        } else {
-            success = total >= 10; // generic DC 10 check
-        }
-
-        var trigger = success
-                ? id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_SUCCESS
-                : id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_FAIL;
-
-        var ctx = new id.patahgaming.dndplugin.ai.NarratorContext(trigger, player.getName())
-                .addResult("skill", pending.rollType.name().toLowerCase())
-                .addResult("roll", String.valueOf(roll))
-                .addResult("total", String.valueOf(total))
-                .addResult("modifier", String.valueOf(modifier))
-                .withRecipient(id.patahgaming.dndplugin.ai.NarratorContext.Recipient.SELF);
-
-        if (!success) {
-            ctx.addResult("outcome", "failure");
-        }
-        plugin.getNarratorService().narrate(ctx);
     }
 
     private String formatRollType(String rollType) {

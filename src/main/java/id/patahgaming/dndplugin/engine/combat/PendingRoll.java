@@ -40,11 +40,14 @@ public class PendingRoll {
     private static final NamespacedKey KEY_PROMPT = new NamespacedKey("dndplugin", "pending_prompt");
 
     public RollType rollType;
+    public String diceExpr;          // "d20+5", "1d8+3", "2d8+3" — engine dice expression
     public String targetId;          // UUID prefix target
     public String extraData;         // weapon/spell name, dll
     public String saveAbility;       // buat saving throw
     public int saveDC;
     public String promptMsg;
+    public int lastRollResult;       // hasil roll terakhir (diisi setelah player roll)
+    public boolean resolved;         // sudah di-roll oleh player?
 
     /** Set pending roll di PDC player. Overwrite existing. */
     public static void set(Player player, PendingRoll pr) {
