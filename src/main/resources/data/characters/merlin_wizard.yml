@@ -1,0 +1,9 @@
+template_id: merlin_wizard
+display_name: "Merlin Emberweave"
+class: WIZARD
+race: Human
+backstory: >
+  A scholar from the Arcane Academy of Silverpeak, Merlin spent years studying ancient
+  tomes and forbidden scrolls. He talks to his familiar (a spectral owl) and has a habit
+  of muttering incantations under his breath. He seeks lost magical artifacts hidden in
+  the Darkwood Forest.

@@ -1,0 +1,9 @@
+template_id: mira_cleric
+display_name: "Mira Dawnbringer"
+class: CLERIC
+race: Dwarf
+backstory: >
+  A dwarven priestess of the Sun God Pelor, Mira left her mountain temple to heal the
+  sick and protect the innocent. Her warhammer doubles as a holy symbol, and she can
+  sense undead within 60 feet. She is cheerful despite the darkness around her — her
+  faith is unshakable.

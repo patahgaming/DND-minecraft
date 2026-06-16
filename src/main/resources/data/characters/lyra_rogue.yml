@@ -1,0 +1,9 @@
+template_id: lyra_rogue
+display_name: "Lyra Shadowmere"
+class: ROGUE
+race: Elf
+backstory: >
+  Raised on the streets of the merchant city of Astapor, Lyra learned to survive by
+  her wits and quick fingers. She can pick any lock, talk her way out of trouble, and
+  vanish into shadows when words fail. She's searching for the legendary "Shadow Diamond"
+  that was stolen from her guild.

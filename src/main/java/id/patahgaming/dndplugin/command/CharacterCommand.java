@@ -44,6 +44,8 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "create" -> handleCreate(player, args);
+            case "pick" -> handlePick(player, args);
+            case "list" -> handleList(player);
             case "info" -> handleInfo(player);
             default -> sendUsage(player);
         }
@@ -127,10 +129,91 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
         return score + " (" + (mod >= 0 ? "+" : "") + mod + ")";
     }
 
+    private void handlePick(Player player, String[] args) {
+        PlayerDataStore store = plugin.getPlayerDataStore();
+        if (store.hasCharacter(player)) {
+            player.sendMessage("§cKamu sudah punya karakter!");
+            return;
+        }
+        if (args.length < 2) {
+            player.sendMessage("§e/character pick <template> §7— Pilih karakter dari template");
+            player.sendMessage("§7Gunakan §e/character list §7untuk lihat daftar.");
+            return;
+        }
+        String templateId = args[1].toLowerCase();
+
+        // Load template YAML
+        var template = loadTemplate(templateId);
+        if (template == null) {
+            player.sendMessage("§cTemplate '" + templateId + "' tidak ditemukan.");
+            player.sendMessage("§7Gunakan §e/character list §7untuk lihat daftar.");
+            return;
+        }
+
+        String className = template.get("class");
+        String charName = template.get("display_name");
+        String race = template.get("race");
+        String backstory = template.get("backstory");
+        CharacterClass charClass = CharacterClass.fromName(className);
+
+        if (charClass == null) {
+            player.sendMessage("§cClass tidak valid di template: " + className);
+            return;
+        }
+
+        store.createCharacter(player, charClass, charName, race);
+
+        // Tampilkan backstory
+        if (backstory != null && !backstory.isEmpty()) {
+            player.sendMessage("§6§lBackstory:§r");
+            player.sendMessage("§7" + backstory);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.Map<String, String> loadTemplate(String templateId) {
+        try (var in = plugin.getResource("data/characters/" + templateId + ".yml")) {
+            if (in == null) return null;
+            org.yaml.snakeyaml.Yaml yaml = new org.yaml.snakeyaml.Yaml();
+            var data = yaml.load(in);
+            if (data instanceof java.util.Map<?, ?> map) {
+                java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+                for (var entry : map.entrySet()) {
+                    result.put(String.valueOf(entry.getKey()),
+                            entry.getValue() != null ? entry.getValue().toString() : "");
+                }
+                return result;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void handleList(Player player) {
+        player.sendMessage("§6§l=== Character Templates ===§r");
+        // List template files dari JAR
+        String[][] templates = {
+                {"aric_fighter", "Aric the Shieldbearer", "Fighter", "Human",
+                        "Ex-captain seeking to rebuild his honor."},
+                {"lyra_rogue", "Lyra Shadowmere", "Rogue", "Elf",
+                        "Street-smart thief hunting the Shadow Diamond."},
+                {"merlin_wizard", "Merlin Emberweave", "Wizard", "Human",
+                        "Scholar seeking lost magical artifacts."},
+                {"mira_cleric", "Mira Dawnbringer", "Cleric", "Dwarf",
+                        "Dwarven priestess of the Sun God Pelor."},
+        };
+        for (String[] t : templates) {
+            player.sendMessage("§e  " + t[0] + " §7— §6" + t[1]
+                    + " §7(Lv1 " + t[2] + " " + t[3] + ")");
+            player.sendMessage("§7    " + t[4]);
+        }
+        player.sendMessage("§7Pakai: §e/character pick <template_id>");
+    }
+
     private void sendUsage(Player player) {
-        player.sendMessage("§e/character create <class> [name] [race] §7— Buat karakter baru");
+        player.sendMessage("§e/character list §7— Lihat daftar template karakter");
+        player.sendMessage("§e/character pick <template> §7— Pilih karakter dari template (rekomendasi!)");
+        player.sendMessage("§e/character create <class> [name] [race] §7— Buat karakter kustom");
         player.sendMessage("§e/character info §7— Lihat stats karakter");
-        player.sendMessage("§7Classes: Fighter, Rogue, Wizard, Cleric, Barbarian, Ranger, Paladin, Warlock, Monk, Druid");
     }
 
     @Override
@@ -141,10 +224,15 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subs = new ArrayList<>();
-            for (String s : List.of("create", "info")) {
+            for (String s : List.of("list", "pick", "create", "info")) {
                 if (s.startsWith(input)) subs.add(s);
             }
             return subs;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("pick")) {
+            String input = args[1].toLowerCase();
+            return List.of("aric_fighter", "lyra_rogue", "merlin_wizard", "mira_cleric").stream()
+                    .filter(s -> s.startsWith(input)).toList();
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
             String input = args[1].toLowerCase();

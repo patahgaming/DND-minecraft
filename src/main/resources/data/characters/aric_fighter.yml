@@ -1,0 +1,9 @@
+template_id: aric_fighter
+display_name: "Aric the Shieldbearer"
+class: FIGHTER
+race: Human
+backstory: >
+  Aric was a captain in the Thornhollow militia before monsters overran his village.
+  He carries his family's ancestral longsword and a shield bearing the faded emblem of
+  his fallen order. Stoic and protective, he seeks to rebuild his honor and find the
+  creatures that destroyed his home.
