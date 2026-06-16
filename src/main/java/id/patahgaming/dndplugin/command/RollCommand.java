@@ -65,12 +65,34 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // PendingRoll auto-detect
+        var pending = id.patahgaming.dndplugin.engine.combat.PendingRoll.get(player);
+
         if (args.length < 1) {
-            player.sendMessage("Gunakan: /roll <jenis_tindakan>. Contoh: /roll stealth");
+            if (pending != null) {
+                // Auto-detect: roll sesuai pending
+                player.sendMessage("§7Auto-detected: rolling " + pending.rollType.name().toLowerCase());
+                executeRoll(player, pending.rollType.name().toLowerCase(), pending);
+                return true;
+            }
+            player.sendMessage("§7Gunakan: /roll <jenis_tindakan>. Contoh: /roll stealth");
             return true;
         }
 
         String rollType = args[0].toLowerCase();
+
+        // Guard: kalau ada pending, harus match
+        if (pending != null && !pending.rollType.matches(rollType)) {
+            player.sendMessage("§cYang perlu di-roll sekarang: §e" + pending.rollType.name().toLowerCase());
+            player.sendMessage("§7Atau ketik §e/roll §7tanpa argumen untuk auto-detect.");
+            return true;
+        }
+        executeRoll(player, rollType, pending);
+        return true;
+    }
+
+    private void executeRoll(Player player, String rollType,
+                             id.patahgaming.dndplugin.engine.combat.PendingRoll pending) {
         String ability = ROLL_TYPE_ABILITY.getOrDefault(rollType, "");
 
         int modifier = 0;
@@ -78,17 +100,15 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             modifier = plugin.getPlayerDataStore().getAbilityModifier(player, ability);
         }
 
-        // Proficiency bonus: hanya untuk 2 skill yang "dipilih" (2 pertama dari class skill options)
+        // Proficiency bonus
         if (!ability.isEmpty() && !rollType.equals("initiative") && !rollType.equals("attack")
                 && !rollType.equals("death_save")) {
             CharacterClass charClass = CharacterClass.fromName(
                     plugin.getPlayerDataStore().getCharacterClass(player));
             if (charClass != null && charClass.hasSkillOption(rollType)) {
-                // Cek apakah skill ini di 2 pertama (simulasi "chosen skills")
                 List<String> options = charClass.getSkillOptions();
-                int maxChosen = 2; // D&D: most classes pick 2 skills at Lv1
                 int chosenIdx = options.indexOf(rollType.toLowerCase());
-                if (chosenIdx >= 0 && chosenIdx < maxChosen) {
+                if (chosenIdx >= 0 && chosenIdx < 2) {
                     int profBonus = id.patahgaming.dndplugin.engine.combat.CombatEngine
                             .proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
                     modifier += profBonus;
@@ -96,14 +116,32 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        // Pisahkan raw d20 roll dan modifier untuk animasi
-        int roll = DiceRoller.roll(20);         // d20 murni (1–20)
+        int roll = DiceRoller.roll(20);
         int total = roll + modifier;
+        TitleDisplay.showRollAnimation(plugin, player, formatRollType(rollType), modifier, roll, total);
 
-        // Animasi: 4 flash frame → final color-coded result
-        TitleDisplay.showRollAnimation(plugin, player,
-                formatRollType(rollType), modifier, roll, total);
-        return true;
+        // Resolve PendingRoll kalau ada
+        if (pending != null) {
+            resolvePendingRoll(player, pending, roll, total, modifier);
+        }
+    }
+
+    /** Resolve pending roll — clear pending, narrate result. */
+    private void resolvePendingRoll(Player player,
+                                     id.patahgaming.dndplugin.engine.combat.PendingRoll pending,
+                                     int roll, int total, int modifier) {
+        // Clear pending — roll sudah dilakukan
+        id.patahgaming.dndplugin.engine.combat.PendingRoll.clear(player);
+
+        // Narration via NarratorService
+        var ctx = new id.patahgaming.dndplugin.ai.NarratorContext(
+                id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_SUCCESS, player.getName())
+                .addResult("skill", pending.rollType.name().toLowerCase())
+                .addResult("roll", String.valueOf(roll))
+                .addResult("total", String.valueOf(total))
+                .addResult("modifier", String.valueOf(modifier))
+                .withRecipient(id.patahgaming.dndplugin.ai.NarratorContext.Recipient.SELF);
+        plugin.getNarratorService().narrate(ctx);
     }
 
     private String formatRollType(String rollType) {

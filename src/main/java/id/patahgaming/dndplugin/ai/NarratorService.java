@@ -1,229 +1,397 @@
 package id.patahgaming.dndplugin.ai;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.ai.NarratorContext.TriggerType;
+import id.patahgaming.dndplugin.ai.NarratorContext.Priority;
+import id.patahgaming.dndplugin.ai.NarratorContext.Recipient;
 import id.patahgaming.dndplugin.data.PoiStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
-import id.patahgaming.dndplugin.data.PlayerDataStore;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * AI Narrator — dual mode:
+ * NarratorService v2 — Unified Narration Layer.
  *
- * 1. ON-RAIL: Player mengikuti story tree → AI render narrative template +
- *    isi detail kontekstual (nama player, posisi, waktu), tawarkan choices.
+ * Single entry point untuk semua narasi. Semua komponen lain (combat engine,
+ * NPC dialogue, POI tick, command handler) tidak boleh langsung kirim chat ke
+ * player — semuanya lewat sini.
  *
- * 2. OFF-RAIL: Player keluar dari story tree (tidak ada node yang match) →
- *    AI generate cerita baru, tetap constrained oleh world POI/lore yang ada
- *    di YAML (tanpa Qdrant — context langsung dari file POI + SRD relevan).
- *
- * Semua panggilan DeepSeek dilakukan secara ASYNC (BukkitScheduler).
- * Response AI ditampilkan via public chat (narasi grup).
+ * Fitur:
+ * - Template prompt per TriggerType
+ * - Priority queue + debounce (P0 immediate, P1 500ms, P2 1s)
+ * - Fallback hardcoded template kalau DeepSeek timeout (8s)
+ * - mechanicResult immutable — AI gak boleh ubah angka
  */
 public class NarratorService {
 
     private final DndPlugin plugin;
+    private final Queue<NarratorContext> queue = new ConcurrentLinkedQueue<>();
+    private boolean processing = false;
+    private int scheduledTaskId = -1;
 
     public NarratorService(DndPlugin plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * On-rail narration — player masih di dalam story tree.
-     * AI memperkaya narrative template node dengan detail dunia + party.
-     */
+    // ==================== PUBLIC API ====================
+
+    /** Kirim narasi ke queue. P0 langsung, P1/P2 di-debounce. */
+    public void narrate(NarratorContext ctx) {
+        if (ctx.priority == Priority.P0_IMMEDIATE) {
+            // Bypass queue — kirim instan
+            executeNarration(ctx);
+            return;
+        }
+        queue.add(ctx);
+        scheduleProcessing();
+    }
+
+    /** On-rail narration (backward compat). */
     public void narrateOnRail(StoryTreeStore.StoryNode node, Player triggerPlayer) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                String systemPrompt = buildNarratorSystemPrompt();
-                String userPrompt = buildOnRailPrompt(node, triggerPlayer);
-
-                String narration = plugin.getDeepSeekClient().complete(systemPrompt, userPrompt);
-
-                // Balik ke main thread untuk broadcast
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    String formatted = "§6[Narrator]§r " + narration;
-                    Bukkit.broadcastMessage(formatted);
-
-                    // Tampilkan choices jika ada
-                    if (!node.choices.isEmpty()) {
-                        Bukkit.broadcastMessage("§e--- Choices ---");
-                        for (StoryTreeStore.Choice choice : node.choices) {
-                            Bukkit.broadcastMessage("§a  • " + choice.id + " §7→ " + choice.nextNode);
-                        }
-                    }
-                });
-
-            } catch (Exception e) {
-                plugin.getLogger().warning("Narrator on-rail failed: " + e.getMessage());
-                // Fallback: tampilkan narrative template mentah
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    Bukkit.broadcastMessage("§6[Narrator]§r " + node.narrative);
-                });
-            }
-        });
+        NarratorContext ctx = new NarratorContext(TriggerType.POI_ON_RAIL, "Party")
+                .withRecipient(Recipient.PARTY)
+                .addExtra("narrative", node.narrative)
+                .addExtra("currentNode", node.nodeId);
+        if (triggerPlayer != null) ctx.addExtra("triggerPlayer", triggerPlayer.getName());
+        narrate(ctx);
     }
 
-    /**
-     * Off-rail narration — player keluar dari story tree.
-     * AI generate cerita baru dari nol, constrained oleh POI + party context.
-     */
+    /** Off-rail narration (backward compat). */
     public void narrateOffRail(Player triggerPlayer) {
+        NarratorContext ctx = new NarratorContext(TriggerType.POI_OFF_RAIL, "Party")
+                .withRecipient(Recipient.PARTY);
+        if (triggerPlayer != null) ctx.addExtra("triggerPlayer", triggerPlayer.getName());
+        narrate(ctx);
+    }
+
+    // ==================== QUEUE & DEBOUNCE ====================
+
+    private void scheduleProcessing() {
+        if (processing) return; // udah ada yang lagi jalan
+        if (scheduledTaskId != -1) return; // udah dijadwalkan
+
+        int delayTicks = 10; // 500ms default (P1)
+        // Kalau semua item P2, bisa delay lebih lama
+        boolean allP2 = queue.stream().allMatch(c -> c.priority == Priority.P2_DEFERRABLE);
+        if (allP2) delayTicks = 20; // 1 detik
+
+        scheduledTaskId = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            scheduledTaskId = -1;
+            processQueue();
+        }, delayTicks).getTaskId();
+    }
+
+    private void processQueue() {
+        processing = true;
+        try {
+            // Gabungin semua item di queue jadi 1 batch
+            List<NarratorContext> batch = new ArrayList<>();
+            NarratorContext ctx;
+            while ((ctx = queue.poll()) != null) {
+                batch.add(ctx);
+            }
+            if (batch.isEmpty()) return;
+
+            if (batch.size() == 1) {
+                executeNarration(batch.get(0));
+            } else {
+                executeBatchNarration(batch);
+            }
+        } finally {
+            processing = false;
+            // Kalau ada item baru yang datang selama processing, schedule lagi
+            if (!queue.isEmpty()) scheduleProcessing();
+        }
+    }
+
+    // ==================== AI EXECUTION ====================
+
+    private void executeNarration(NarratorContext ctx) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                String systemPrompt = buildNarratorSystemPrompt();
-                String userPrompt = buildOffRailPrompt(triggerPlayer);
+                String prompt = buildPrompt(ctx);
+                String systemPrompt = buildSystemPrompt();
+                String response = plugin.getDeepSeekClient().complete(systemPrompt, prompt);
 
-                String narration = plugin.getDeepSeekClient().complete(systemPrompt, userPrompt);
-
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    Bukkit.broadcastMessage("§6[Narrator]§r " + narration);
-                });
+                Bukkit.getScheduler().runTask(plugin, () -> route(ctx, response));
 
             } catch (Exception e) {
-                plugin.getLogger().warning("Narrator off-rail failed: " + e.getMessage());
+                plugin.getLogger().warning("Narrator failed for " + ctx.triggerType + ": " + e.getMessage());
+                // Fallback
+                String fallback = ctx.fallbackTemplate != null
+                        ? injectVars(ctx.fallbackTemplate, ctx) : null;
+                if (fallback != null) {
+                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(fallback, ctx.recipient));
+                }
             }
         });
     }
 
-    /**
-     * System prompt: set kepribadian AI narator — omniscient, fantasy DM style.
-     * Include relevant SRD rules kalau ada keyword yang match di story node.
-     */
-    private String buildNarratorSystemPrompt() {
-        return """
-                You are a Dungeon Master narrating a D&D 5e adventure set in a fantasy world.
-                Your tone is immersive, descriptive, and atmospheric — like a skilled DM at a table.
+    private void executeBatchNarration(List<NarratorContext> batch) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Several events happened in quick succession. Narrate them as a flowing scene (3-4 sentences).\n\n");
+                for (int i = 0; i < batch.size(); i++) {
+                    NarratorContext ctx = batch.get(i);
+                    sb.append("Event ").append(i + 1).append(": ");
+                    sb.append(describeEvent(ctx)).append("\n");
+                    for (var e : ctx.mechanicResult.entrySet()) {
+                        sb.append("  ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
+                    }
+                }
+                sb.append("\nNarrate these events together naturally. Do NOT list them. Do NOT include meta-commentary.");
 
-                Rules:
-                - Narrate in the present tense, second-person ("You see...")
-                - Be concise but evocative (3-5 sentences for narration)
-                - Include sensory details (sight, sound, smell)
-                - When presenting choices, list them clearly
-                - Stay consistent with the world lore and locations provided
-                - NEVER break character or reference "the AI" or "the game"
-                - Respond in English (the game uses English for narration)
+                String response = plugin.getDeepSeekClient().complete(buildSystemPrompt(), sb.toString());
+
+                // Broadcast to PARTY (default for batches)
+                Bukkit.getScheduler().runTask(plugin, () -> routePlain("§6[Narrator]§r " + response, Recipient.PARTY));
+
+            } catch (Exception e) {
+                // Fallback: kirim per event
+                for (NarratorContext ctx : batch) {
+                    String fb = ctx.fallbackTemplate != null ? injectVars(ctx.fallbackTemplate, ctx) : describeEvent(ctx);
+                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(fb, ctx.recipient));
+                }
+            }
+        });
+    }
+
+    // ==================== PROMPT BUILDING ====================
+
+    private String buildSystemPrompt() {
+        return """
+                You are a Dungeon Master narrating D&D 5e in a fantasy world.
+                - Narrate in present or past tense, second-person
+                - Be concise but evocative (1-3 sentences)
+                - Include sensory details when fitting
+                - Stay consistent with provided context
+                - NEVER change the numbers given — they are final
+                - NEVER break character or mention "the AI" or "the game"
+                - Respond in English
                 """;
     }
 
-    /**
-     * Lookup SRD rules yang relevan untuk narrative node.
-     * Cari keyword dari narrative text + node id.
-     */
-    private String lookupRelevantRules(StoryTreeStore.StoryNode node) {
-        if (plugin.getSrdRulesStore() == null || !plugin.getSrdRulesStore().isLoaded()) {
-            return "";
-        }
-        // Cari keyword dari narrative text (kata benda spesifik)
-        String[] keywords = {"stealth", "perception", "survival", "investigation",
-                "combat", "grapple", "cover", "difficult terrain", "jump"};
-        return plugin.getSrdRulesStore().searchMultiple(keywords);
+    private String buildPrompt(NarratorContext ctx) {
+        return switch (ctx.triggerType) {
+            case COMBAT_ATTACK_HIT -> templateAttackHit(ctx);
+            case COMBAT_ATTACK_MISS -> templateAttackMiss(ctx);
+            case COMBAT_ATTACK_CRIT -> templateAttackCrit(ctx);
+            case COMBAT_CAST_SPELL -> templateCastSpell(ctx);
+            case COMBAT_KILL -> templateKill(ctx);
+            case COMBAT_WIN -> templateCombatWin(ctx);
+            case COMBAT_LOSE -> templateCombatLose(ctx);
+            case COMBAT_START -> templateCombatStart(ctx);
+            case COMBAT_DAMAGE_RECEIVED -> templateDamageReceived(ctx);
+            case DEATH_SAVE_SUCCESS -> templateDeathSave(ctx, "success");
+            case DEATH_SAVE_FAIL -> templateDeathSave(ctx, "fail");
+            case DEATH_SAVE_STABILIZE -> templateDeathSave(ctx, "stabilize");
+            case DEATH_SAVE_DEAD -> templateDeathSave(ctx, "dead");
+            case SAVING_THROW_SUCCESS -> templateSavingThrow(ctx, true);
+            case SAVING_THROW_FAIL -> templateSavingThrow(ctx, false);
+            case SKILL_CHECK_SUCCESS, SKILL_CHECK_FAIL -> templateSkillCheck(ctx);
+            case NPC_DIALOG_START -> templateNpcDialogStart(ctx);
+            case NPC_DIALOG_END -> templateNpcDialogEnd(ctx);
+            case NPC_DIALOG_AGRO -> templateNpcDialogAgro(ctx);
+            case CHARACTER_LEVEL_UP -> templateLevelUp(ctx);
+            default -> templateGeneric(ctx);
+        };
     }
 
-    /**
-     * Build on-rail prompt: template narrative + party context + choices.
-     */
-    private String buildOnRailPrompt(StoryTreeStore.StoryNode node, Player triggerPlayer) {
+    // ==================== TRIGGER TEMPLATES ====================
+
+    private String templateAttackHit(NarratorContext ctx) {
+        String dmg = ctx.mechanicResult.getOrDefault("damage", "?");
+        String type = ctx.mechanicResult.getOrDefault("damageType", "?");
+        String roll = ctx.mechanicResult.getOrDefault("roll", "?");
+        return String.format(
+                "%s attacks %s. Attack roll: %s. Damage: %s (%s). Narrate this hit in 2 sentences, dramatic, past tense.%s",
+                ctx.subject, ctx.target, roll, dmg, type,
+                ctx.fallbackTemplate != null ? "" : setFallback(ctx, String.format("%s hits %s for %s %s damage!", ctx.subject, ctx.target, dmg, type)));
+    }
+
+    private String templateAttackMiss(NarratorContext ctx) {
+        String roll = ctx.mechanicResult.getOrDefault("roll", "?");
+        return String.format(
+                "%s attacks %s but misses (roll: %s). Narrate the miss in 1 sentence, past tense.%s",
+                ctx.subject, ctx.target, roll,
+                setFallback(ctx, String.format("%s swings at %s but misses!", ctx.subject, ctx.target)));
+    }
+
+    private String templateAttackCrit(NarratorContext ctx) {
+        String dmg = ctx.mechanicResult.getOrDefault("damage", "?");
+        return String.format(
+                "%s lands a CRITICAL HIT on %s! Damage: %s. Narrate this critical hit in 2 dramatic sentences.%s",
+                ctx.subject, ctx.target, dmg,
+                setFallback(ctx, String.format("CRITICAL HIT! %s devastates %s for %s damage!", ctx.subject, ctx.target, dmg)));
+    }
+
+    private String templateCastSpell(NarratorContext ctx) {
+        String spell = ctx.mechanicResult.getOrDefault("spell", "?");
+        String dmg = ctx.mechanicResult.getOrDefault("damage", "0");
+        String type = ctx.mechanicResult.getOrDefault("damageType", "force");
+        return String.format(
+                "%s casts %s on %s. Damage: %s (%s). Narrate the spellcasting in 2 sentences with magical flavor text.%s",
+                ctx.subject, spell, ctx.target, dmg, type,
+                setFallback(ctx, String.format("%s casts %s! %s takes %s %s damage.", ctx.subject, spell, ctx.target, dmg, type)));
+    }
+
+    private String templateKill(NarratorContext ctx) {
+        return String.format(
+                "%s has slain %s! Narrate the killing blow in 1-2 dramatic sentences.%s",
+                ctx.subject, ctx.target,
+                setFallback(ctx, String.format("%s has been slain by %s!", ctx.target, ctx.subject)));
+    }
+
+    private String templateCombatWin(NarratorContext ctx) {
+        String enemies = ctx.mechanicResult.getOrDefault("enemiesDefeated", "?");
+        return String.format(
+                "The party has won the battle! Enemies defeated: %s. Narrate the victory in 2 sentences.%s",
+                enemies,
+                setFallback(ctx, "Victory! All enemies have been defeated."));
+    }
+
+    private String templateCombatLose(NarratorContext ctx) {
+        return String.format(
+                "The party has been defeated... Narrate this tragic moment in 2 somber sentences. Do not mention mechanics.%s",
+                setFallback(ctx, "The party has fallen..."));
+    }
+
+    private String templateCombatStart(NarratorContext ctx) {
+        String count = ctx.mechanicResult.getOrDefault("enemyCount", "?");
+        return String.format(
+                "Battle begins! %s enemies stand against the party. Narrate the battle opening in 1-2 sentences.%s",
+                count,
+                setFallback(ctx, "Battle begins! Roll for initiative!"));
+    }
+
+    private String templateDamageReceived(NarratorContext ctx) {
+        String dmg = ctx.mechanicResult.getOrDefault("damage", "?");
+        return String.format(
+                "%s attacks %s dealing %s damage. Narrate in 1 sentence from the target's perspective.%s",
+                ctx.target != null ? ctx.target : "An enemy", ctx.subject, dmg,
+                setFallback(ctx, String.format("%s takes %s damage from %s!", ctx.subject, dmg, ctx.target)));
+    }
+
+    private String templateDeathSave(NarratorContext ctx, String outcome) {
+        String roll = ctx.mechanicResult.getOrDefault("roll", "?");
+        String count = ctx.mechanicResult.getOrDefault("count", "?");
+        return String.format(
+                "%s is making death saves. Roll: %s (%s, count: %s). Narrate in 1 sentence. Do NOT say 'death save' literally.%s",
+                ctx.subject, roll, outcome, count,
+                setFallback(ctx, outcome.equals("stabilize") ? ctx.subject + " stabilizes!" :
+                        outcome.equals("dead") ? ctx.subject + " has died..." :
+                        ctx.subject + " struggles... (" + count + ")"));
+    }
+
+    private String templateSavingThrow(NarratorContext ctx, boolean success) {
+        String roll = ctx.mechanicResult.getOrDefault("roll", "?");
+        String dc = ctx.mechanicResult.getOrDefault("dc", "?");
+        String stat = ctx.mechanicResult.getOrDefault("stat", "CON");
+        String effect = ctx.extraData.getOrDefault("effect", "an effect");
+        return String.format(
+                "%s %s a %s saving throw (roll: %s vs DC %s) against %s. Narrate in 1 sentence.%s",
+                ctx.subject, success ? "succeeds" : "fails", stat, roll, dc, effect,
+                setFallback(ctx, success ? ctx.subject + " resists " + effect + "!" :
+                        ctx.subject + " succumbs to " + effect + "!"));
+    }
+
+    private String templateSkillCheck(NarratorContext ctx) {
+        String skill = ctx.mechanicResult.getOrDefault("skill", "?");
+        String roll = ctx.mechanicResult.getOrDefault("roll", "?");
+        String success = ctx.triggerType == TriggerType.SKILL_CHECK_SUCCESS ? "success" : "failure";
+        return String.format(
+                "%s attempts a %s check (roll: %s, %s). Narrate the outcome in 1 sentence.%s",
+                ctx.subject, skill, roll, success,
+                setFallback(ctx, ctx.subject + " " + success + " on " + skill + " check (roll: " + roll + ")"));
+    }
+
+    private String templateNpcDialogStart(NarratorContext ctx) {
+        String npc = ctx.extraData.getOrDefault("npcName", ctx.target);
+        return "";
+    }
+
+    private String templateNpcDialogEnd(NarratorContext ctx) {
+        return "";
+    }
+
+    private String templateNpcDialogAgro(NarratorContext ctx) {
+        String npc = ctx.extraData.getOrDefault("npcName", ctx.target);
+        return String.format(
+                "%s becomes hostile toward %s! Narrate in 1 threatening sentence.%s",
+                npc, ctx.subject,
+                setFallback(ctx, npc + " becomes hostile!"));
+    }
+
+    private String templateLevelUp(NarratorContext ctx) {
+        String lvl = ctx.mechanicResult.getOrDefault("level", "2");
+        return String.format(
+                "%s has leveled up to level %s! Narrate in 1-2 sentences of personal growth.%s",
+                ctx.subject, lvl,
+                setFallback(ctx, ctx.subject + " reaches level " + lvl + "!"));
+    }
+
+    private String templateGeneric(NarratorContext ctx) {
         StringBuilder sb = new StringBuilder();
-        sb.append("NARRATION CONTEXT (On-Rail)\n\n");
-
-        // Narrative template dari story node
-        sb.append("Base narrative template:\n");
-        sb.append("\"").append(node.narrative).append("\"\n\n");
-
-        // Party context
-        appendPartyContext(sb, triggerPlayer);
-
-        // POI context (POI yang mencakup posisi player)
-        if (triggerPlayer != null) {
-            PoiStore.Poi poi = plugin.getPoiStore().findContaining(
-                    triggerPlayer.getLocation().getX(),
-                    triggerPlayer.getLocation().getZ());
-            if (poi != null) {
-                sb.append("Current location: ").append(poi.name)
-                        .append(" (").append(poi.biome).append(" biome)\n\n");
-            }
+        sb.append("Event: ").append(ctx.triggerType).append("\n");
+        sb.append("Subject: ").append(ctx.subject).append("\n");
+        if (ctx.target != null) sb.append("Target: ").append(ctx.target).append("\n");
+        for (var e : ctx.mechanicResult.entrySet()) {
+            sb.append(e.getKey()).append(": ").append(e.getValue()).append("\n");
         }
-
-        // Choices
-        if (!node.choices.isEmpty()) {
-            sb.append("Available choices for the party:\n");
-            for (StoryTreeStore.Choice choice : node.choices) {
-                sb.append("- ").append(choice.id).append("\n");
-            }
-            sb.append("\n");
-        }
-
-        sb.append("Expand the base narrative into a vivid 3-5 sentence narration. ");
-        sb.append("Incorporate the party members' names naturally. ");
-        if (!node.choices.isEmpty()) {
-            sb.append("End by presenting the available choices to the party. ");
-        }
-        sb.append("Do NOT include meta-commentary or markdown formatting.");
-
+        sb.append("Narrate in 1-2 sentences.");
         return sb.toString();
     }
 
-    /**
-     * Build off-rail prompt: no template, fully AI-generated constrained by context.
-     */
-    private String buildOffRailPrompt(Player triggerPlayer) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("NARRATION CONTEXT (Off-Rail — Free Narration)\n\n");
-        sb.append("The party has ventured off the main story path. ");
-        sb.append("Generate a fitting narrative based on their current situation.\n\n");
+    // ==================== HELPERS ====================
 
-        // Party context
-        appendPartyContext(sb, triggerPlayer);
+    private String setFallback(NarratorContext ctx, String fb) {
+        if (ctx.fallbackTemplate == null) ctx.fallbackTemplate = fb;
+        return "";
+    }
 
-        // POI context — semua POI untuk world building
-        sb.append("Known locations in this world:\n");
-        for (PoiStore.Poi poi : plugin.getPoiStore().getAll()) {
-            sb.append("- ").append(poi.name).append(" (").append(poi.biome)
-                    .append(") at bbox [").append(poi.bbox.x1).append(",")
-                    .append(poi.bbox.z1).append(" to ").append(poi.bbox.x2)
-                    .append(",").append(poi.bbox.z2).append("]\n");
+    private String describeEvent(NarratorContext ctx) {
+        StringBuilder sb = new StringBuilder(ctx.triggerType + ": " + ctx.subject);
+        if (ctx.target != null) sb.append(" → ").append(ctx.target);
+        for (var e : ctx.mechanicResult.entrySet()) {
+            sb.append(" | ").append(e.getKey()).append("=").append(e.getValue());
         }
-
-        // Current POI (jika ada)
-        if (triggerPlayer != null) {
-            PoiStore.Poi currentPoi = plugin.getPoiStore().findContaining(
-                    triggerPlayer.getLocation().getX(),
-                    triggerPlayer.getLocation().getZ());
-            if (currentPoi != null) {
-                sb.append("\nParty is currently at: ").append(currentPoi.name)
-                        .append(" (").append(currentPoi.biome).append(")\n");
-            } else {
-                sb.append("\nParty is currently in an unexplored area. ");
-                sb.append("Describe what they discover.\n");
-            }
-        }
-
-        sb.append("\nGenerate a 3-5 sentence narration describing what the party ");
-        sb.append("encounters. Do NOT invent major plot points or new NPCs — focus on ");
-        sb.append("atmosphere, environment, and minor details. Do NOT include meta-commentary.");
-
         return sb.toString();
     }
 
-    /**
-     * Append party member names, stats summary, dan story progress.
-     */
-    private void appendPartyContext(StringBuilder sb, Player triggerPlayer) {
-        PlayerDataStore store = plugin.getPlayerDataStore();
-        sb.append("Party members:\n");
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            sb.append("- ").append(p.getName())
-                    .append(" (Lv.").append(store.getLevel(p)).append(" ")
-                    .append("HP: ").append((int) p.getHealth()).append("/")
-                    .append((int) p.getMaxHealth()).append(")");
-            if (p.equals(triggerPlayer)) {
-                sb.append(" [triggering player]");
+    private String injectVars(String template, NarratorContext ctx) {
+        return template
+                .replace("{subject}", ctx.subject != null ? ctx.subject : "?")
+                .replace("{target}", ctx.target != null ? ctx.target : "?");
+    }
+
+    // ==================== ROUTING ====================
+
+    private void route(NarratorContext ctx, String narration) {
+        String formatted = "§6[Narrator]§r " + narration;
+        routePlain(formatted, ctx.recipient);
+
+        // Special: death saves — SELF + PARTY dapet narasi berbeda
+        if (ctx.triggerType.name().startsWith("DEATH_SAVE") && ctx.recipient == Recipient.PARTY) {
+            Player subject = Bukkit.getPlayer(ctx.subject);
+            if (subject != null && subject.isOnline()) {
+                subject.sendMessage("§7[You] " + narration);
             }
-            sb.append("\n");
         }
-        sb.append("Party story node: ").append(store.getPartyCurrentNode()).append("\n\n");
+    }
+
+    private void routePlain(String message, Recipient recipient) {
+        switch (recipient) {
+            case SELF -> {
+                // hanya player subject — cari dari online players
+                // (untuk sekarang broadcast ke semua, nanti bisa di-refine)
+                Bukkit.broadcastMessage(message);
+            }
+            case PARTY -> Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(message));
+            case BROADCAST -> Bukkit.broadcastMessage(message);
+        }
     }
 }
