@@ -83,14 +83,11 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         }
         participants.addAll(targets);
 
-        // Start battle!
-        var order = tm.startBattle(participants);
+        // Start battle! (TurnManager.startBattle handles broadcast + first turn)
+        tm.startBattle(participants);
 
-        Bukkit.broadcastMessage("§c§l⚔ BATTLE STARTED! ⚔");
-        Bukkit.broadcastMessage("§7  " + targets.size() + " enemies | " +
-                (participants.size() - targets.size()) + " party members");
-        Bukkit.broadcastMessage("§7  Round " + tm.getRoundNumber() + " — Initiative rolled!");
         player.sendMessage("§aGunakan §e/atk melee §aatau §e/atk ranged §auntuk menyerang!");
+        player.sendMessage("§7Lihat turn order: §e/battle status");
     }
 
     private void handleFlee(Player player) {

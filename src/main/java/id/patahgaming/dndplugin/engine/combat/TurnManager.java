@@ -3,6 +3,7 @@ package id.patahgaming.dndplugin.engine.combat;
 import id.patahgaming.dndplugin.DndPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public class TurnManager {
     }
 
     /**
-     * Mulai battle — roll initiative, set state ACTIVE, mulai round 1.
+     * Mulai battle — roll initiative, freeze mobs, mulai round 1.
      */
     public List<InitiativeRoller.InitiativeEntry> startBattle(List<LivingEntity> battleParticipants) {
         participants.clear();
@@ -56,31 +57,35 @@ public class TurnManager {
             participants.put(e.getUniqueId(), e);
         }
 
+        // Freeze semua mob AI — cuma bertindak pas giliran turn-based
+        for (LivingEntity e : battleParticipants) {
+            if (e instanceof Mob mob && !(e instanceof Player)) {
+                mob.setAware(false);
+            }
+        }
+
         turnOrder.clear();
         turnOrder.addAll(InitiativeRoller.rollInitiative(plugin, battleParticipants));
 
-        currentTurnIndex = 0;
+        currentTurnIndex = -1; // akan maju ke 0 di beginFirstTurn
         roundNumber = 1;
         battleState = BattleState.ACTIVE;
         combatState = CombatState.WAITING_TURN;
 
-        // Log turn order
-        plugin.getLogger().info("=== Battle Started — Round " + roundNumber + " ===");
-        for (int i = 0; i < turnOrder.size(); i++) {
-            var entry = turnOrder.get(i);
-            plugin.getLogger().info((i + 1) + ". " + entry.displayName
-                    + " (" + entry.roll + " + " + entry.dexModifier + " = " + entry.total + ")");
-        }
-
         // Broadcast turn order
-        StringBuilder sb = new StringBuilder("§c=== Initiative ===§r");
+        plugin.getLogger().info("=== Battle Started — Round " + roundNumber + " ===");
+        StringBuilder sb = new StringBuilder("§c§l⚔ BATTLE STARTED! ⚔§r");
+        sb.append("\n§7Round 1 — Initiative:");
         for (int i = 0; i < turnOrder.size(); i++) {
             var e = turnOrder.get(i);
-            sb.append("\n§e").append(i + 1).append(". ").append(e.displayName)
+            sb.append("\n§e  ").append(i + 1).append(". ").append(e.displayName)
                     .append(" §7(").append(e.total).append(")");
         }
         String msg = sb.toString();
         Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(msg));
+
+        // Mulai turn pertama
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
 
         return turnOrder;
     }
@@ -122,8 +127,13 @@ public class TurnManager {
         }
     }
 
-    /** Auto-AI untuk mob: serang player random. */
+    /** Auto-AI untuk mob: unfreeze → serang → re-freeze → next turn. */
     private void runMobTurn(LivingEntity mob) {
+        // Unfreeze sementara untuk giliran mob
+        if (mob instanceof Mob m && !(mob instanceof Player)) {
+            m.setAware(true);
+        }
+
         Player target = null;
         double closest = Double.MAX_VALUE;
         for (var entry : participants.entrySet()) {
@@ -137,19 +147,18 @@ public class TurnManager {
         }
 
         if (target == null) {
+            if (mob instanceof Mob m && !(mob instanceof Player)) m.setAware(false);
             nextTurn();
             return;
         }
 
         // Mob attack resolution
-        id.patahgaming.dndplugin.engine.combat.CombatEngine.AttackResult result =
-                id.patahgaming.dndplugin.engine.combat.CombatEngine.resolveMobAttack(mob, target);
+        CombatEngine.AttackResult result = CombatEngine.resolveMobAttack(mob, target);
 
         if (result.hit) {
-            int dmg = id.patahgaming.dndplugin.engine.combat.CombatEngine.applyDamage(
-                    target, result.totalDamage, result.damageType);
-            Bukkit.broadcastMessage("§c[Combat]§r " + mob.getName() + " menyerang "
-                    + target.getName() + "! §c-" + dmg + " HP §7[" + result.damageType + "]");
+            int dmg = CombatEngine.applyDamage(target, result.totalDamage, result.damageType);
+            Bukkit.broadcastMessage("§c[Combat]§r " + mob.getName() + " §7→§r "
+                    + target.getName() + " §c-" + dmg + " HP §7[" + result.damageType + "]");
 
             if (target.getHealth() <= 0) {
                 Bukkit.broadcastMessage("§c§l" + target.getName() + " is unconscious!");
@@ -159,8 +168,13 @@ public class TurnManager {
             Bukkit.broadcastMessage("§7[Combat] " + mob.getName() + " misses " + target.getName() + "!");
         }
 
-        // Delay mob turn biar gak instan
-        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 30L); // 1.5 detik
+        // Re-freeze mob setelah giliran
+        if (mob instanceof Mob m && !(mob instanceof Player)) {
+            m.setAware(false);
+        }
+
+        // Delay ke next turn
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 30L);
     }
 
     /**
@@ -206,8 +220,15 @@ public class TurnManager {
         return allPlayersDead || allMobsDead || participants.size() <= 1;
     }
 
-    /** Akhiri battle. */
+    /** Akhiri battle — unfreeze semua mob yang selamat. */
     public void endBattle() {
+        // Unfreeze semua mob yang masih hidup
+        for (LivingEntity e : participants.values()) {
+            if (e instanceof Mob mob && !(e instanceof Player) && !e.isDead()) {
+                mob.setAware(true);
+            }
+        }
+
         battleState = BattleState.INACTIVE;
         combatState = CombatState.WAITING_TURN;
         turnOrder.clear();
@@ -216,7 +237,7 @@ public class TurnManager {
         roundNumber = 0;
 
         Bukkit.getOnlinePlayers().forEach(p ->
-                p.sendMessage("§a=== Battle Ended ===§r"));
+                p.sendMessage("§a§l=== Battle Ended ===§r"));
         plugin.getLogger().info("Battle ended.");
     }
 
