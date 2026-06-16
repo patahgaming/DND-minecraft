@@ -47,6 +47,7 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
             case "pick" -> handlePick(player, args);
             case "list" -> handleList(player);
             case "info" -> handleInfo(player);
+            case "reset" -> handleReset(player);
             default -> sendUsage(player);
         }
         return true;
@@ -209,11 +210,25 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§7Pakai: §e/character pick <template_id>");
     }
 
+    private void handleReset(Player player) {
+        PlayerDataStore store = plugin.getPlayerDataStore();
+        if (!store.hasCharacter(player)) {
+            player.sendMessage("§7Kamu belum punya karakter. Buat dulu: §e/character list");
+            return;
+        }
+        String name = store.getCharacterName(player);
+        store.resetCharacter(player);
+        player.sendMessage("§c§lCharacter Reset!");
+        player.sendMessage("§7Karakter §e" + name + " §7telah dihapus.");
+        player.sendMessage("§7Buat karakter baru: §e/character list");
+    }
+
     private void sendUsage(Player player) {
         player.sendMessage("§e/character list §7— Lihat daftar template karakter");
-        player.sendMessage("§e/character pick <template> §7— Pilih karakter dari template (rekomendasi!)");
-        player.sendMessage("§e/character create <class> [name] [race] §7— Buat karakter kustom");
-        player.sendMessage("§e/character info §7— Lihat stats karakter");
+        player.sendMessage("§e/character pick <template> §7— Pilih karakter dari template");
+        player.sendMessage("§e/character create <class> [name] [race] §7— Buat kustom");
+        player.sendMessage("§e/character info §7— Lihat stats");
+        player.sendMessage("§e/character reset §7— Hapus karakter & mulai ulang");
     }
 
     @Override
@@ -224,7 +239,7 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subs = new ArrayList<>();
-            for (String s : List.of("list", "pick", "create", "info")) {
+            for (String s : List.of("list", "pick", "create", "info", "reset")) {
                 if (s.startsWith(input)) subs.add(s);
             }
             return subs;

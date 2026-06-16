@@ -207,6 +207,37 @@ public class PlayerDataStore {
         return player.getPersistentDataContainer().has(KEY_HAS_CHARACTER, PersistentDataType.STRING);
     }
 
+    /** Hapus semua data karakter player — reset ke state awal. */
+    public void resetCharacter(Player player) {
+        var pdc = player.getPersistentDataContainer();
+        pdc.remove(KEY_LEVEL);
+        pdc.remove(KEY_STR);
+        pdc.remove(KEY_DEX);
+        pdc.remove(KEY_CON);
+        pdc.remove(KEY_INT);
+        pdc.remove(KEY_WIS);
+        pdc.remove(KEY_CHA);
+        pdc.remove(KEY_CLASS);
+        pdc.remove(KEY_CHAR_NAME);
+        pdc.remove(KEY_RACE);
+        pdc.remove(KEY_HAS_CHARACTER);
+
+        // Reset HP ke default Minecraft
+        player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(20);
+        player.setHealth(20);
+
+        // Hapus YAML file
+        UUID uuid = player.getUniqueId();
+        File file = new File(playersFolder, uuid + ".yml");
+        if (file.exists()) {
+            file.delete();
+        }
+        cache.remove(uuid);
+        playerNodeProgress.remove(uuid);
+
+        plugin.getLogger().info("Character reset for " + player.getName());
+    }
+
     public int getAbility(Player player, String ability) {
         NamespacedKey k = switch (ability.toLowerCase()) {
             case "str" -> KEY_STR;
