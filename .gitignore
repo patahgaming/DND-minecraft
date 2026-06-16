@@ -23,9 +23,8 @@ dependency-reduced-pom.xml
 Thumbs.db
 Desktop.ini
 
-# Minecraft Server
+# Minecraft Server (runtime only — dibuild dari source)
 server/
-!server/plugins/
 
 # Java
 *.class
