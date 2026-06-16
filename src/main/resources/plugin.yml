@@ -6,6 +6,9 @@ author: patahgaming
 description: DnD AI System - Minecraft-native interface dengan AI narator/NPC (DeepSeek)
 
 commands:
+  dnd:
+    description: DnD admin commands (reload, save, version, stop, start)
+    usage: /dnd <reload|save|version|stop|start>
   atk:
     description: Serangan saat giliran combat aktif
     usage: /atk <mob_id>

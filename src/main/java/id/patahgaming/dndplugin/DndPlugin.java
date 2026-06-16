@@ -4,6 +4,7 @@ import id.patahgaming.dndplugin.ai.DeepSeekClient;
 import id.patahgaming.dndplugin.ai.NarratorService;
 import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
+import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
 import id.patahgaming.dndplugin.command.SpawnNpcCommand;
@@ -76,6 +77,9 @@ public final class DndPlugin extends JavaPlugin {
         NewNpcCommand newNpcCommand = new NewNpcCommand(this);
         getCommand("newnpc").setExecutor(newNpcCommand);
         getCommand("newnpc").setTabCompleter(newNpcCommand);
+        DndCommand dndCommand = new DndCommand(this);
+        getCommand("dnd").setExecutor(dndCommand);
+        getCommand("dnd").setTabCompleter(dndCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
@@ -157,5 +161,21 @@ public final class DndPlugin extends JavaPlugin {
 
     public PoiTickTask getPoiTickTask() {
         return poiTickTask;
+    }
+
+    public void setPoiTickTask(PoiTickTask task) {
+        this.poiTickTask = task;
+    }
+
+    /**
+     * Hot reload semua data stores dari disk — tanpa restart server.
+     * Dipanggil dari /dnd reload.
+     */
+    public void reloadDataStores() {
+        this.playerDataStore = new PlayerDataStore(this);
+        this.npcDataStore = new NpcDataStore(this);
+        this.storyTreeStore = new StoryTreeStore(this);
+        this.poiStore = new PoiStore(this);
+        getLogger().info("Data stores reloaded from disk.");
     }
 }
