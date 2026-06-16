@@ -109,9 +109,58 @@ public class TurnManager {
 
         var current = turnOrder.get(currentTurnIndex);
         LivingEntity entity = participants.get(current.entityUuid);
-        if (entity instanceof Player player) {
-            player.sendMessage("§aGiliran kamu! Gunakan /atk <mob_id> atau /roll <jenis>");
+        if (entity == null || entity.isDead()) {
+            nextTurn(); // skip dead/missing
+            return;
         }
+        if (entity instanceof Player player) {
+            player.sendMessage("§a⚔ Giliran kamu! §7/atk melee §8| §7/atk ranged §8| §7/cast §8| §7/battle flee");
+            player.sendMessage("§7  Turn: " + getCurrentTurnDisplay());
+        } else {
+            // Mob turn — auto attack random player
+            runMobTurn(entity);
+        }
+    }
+
+    /** Auto-AI untuk mob: serang player random. */
+    private void runMobTurn(LivingEntity mob) {
+        Player target = null;
+        double closest = Double.MAX_VALUE;
+        for (var entry : participants.entrySet()) {
+            if (entry.getValue() instanceof Player p && !p.isDead()) {
+                double dist = mob.getLocation().distanceSquared(p.getLocation());
+                if (dist < closest) {
+                    closest = dist;
+                    target = p;
+                }
+            }
+        }
+
+        if (target == null) {
+            nextTurn();
+            return;
+        }
+
+        // Mob attack resolution
+        id.patahgaming.dndplugin.engine.combat.CombatEngine.AttackResult result =
+                id.patahgaming.dndplugin.engine.combat.CombatEngine.resolveMobAttack(mob, target);
+
+        if (result.hit) {
+            int dmg = id.patahgaming.dndplugin.engine.combat.CombatEngine.applyDamage(
+                    target, result.totalDamage, result.damageType);
+            Bukkit.broadcastMessage("§c[Combat]§r " + mob.getName() + " menyerang "
+                    + target.getName() + "! §c-" + dmg + " HP §7[" + result.damageType + "]");
+
+            if (target.getHealth() <= 0) {
+                Bukkit.broadcastMessage("§c§l" + target.getName() + " is unconscious!");
+                removeParticipant(target);
+            }
+        } else {
+            Bukkit.broadcastMessage("§7[Combat] " + mob.getName() + " misses " + target.getName() + "!");
+        }
+
+        // Delay mob turn biar gak instan
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 30L); // 1.5 detik
     }
 
     /**
@@ -169,6 +218,24 @@ public class TurnManager {
         Bukkit.getOnlinePlayers().forEach(p ->
                 p.sendMessage("§a=== Battle Ended ===§r"));
         plugin.getLogger().info("Battle ended.");
+    }
+
+    /** Hapus participant dari battle (mati / kabur). */
+    public void removeParticipant(LivingEntity entity) {
+        participants.remove(entity.getUniqueId());
+        turnOrder.removeIf(e -> e.entityUuid.equals(entity.getUniqueId()));
+        if (currentTurnIndex >= turnOrder.size()) {
+            currentTurnIndex = 0;
+        }
+    }
+
+    /** Display turn info buat player. */
+    public String getCurrentTurnDisplay() {
+        if (battleState != BattleState.ACTIVE || turnOrder.isEmpty()) return "No battle";
+        var current = turnOrder.get(currentTurnIndex);
+        LivingEntity entity = participants.get(current.entityUuid);
+        String name = entity instanceof Player p ? p.getName() : entity.getName();
+        return "Round " + roundNumber + " — " + name + " [" + current.total + "]";
     }
 
     // --- Getters ---

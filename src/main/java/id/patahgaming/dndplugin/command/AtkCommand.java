@@ -1,26 +1,31 @@
 package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.engine.combat.CombatEngine;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
-import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * /atk <mob_id>
+ * /atk <melee|ranged> [target_uuid_prefix]
  *
- * Serangan saat giliran combat aktif. Validasi giliran via TurnManager.
- * Attack roll = d20 + STR modifier (default melee).
+ * Full D&D 5e attack resolution:
+ * - d20 + modifier + proficiency vs target AC
+ * - Hit on >= AC, nat20 = crit (double dice)
+ * - Damage with type, resistance/vulnerability applied
  */
-public class AtkCommand implements CommandExecutor {
+public class AtkCommand implements CommandExecutor, TabCompleter {
 
     private final DndPlugin plugin;
 
@@ -32,97 +37,141 @@ public class AtkCommand implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                               @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Command ini hanya bisa dijalankan oleh player.");
+            sender.sendMessage("§cCommand ini hanya bisa dijalankan oleh player.");
             return true;
         }
 
-        if (args.length < 1) {
-            player.sendMessage("Gunakan: /atk <mob_id>");
-            return true;
-        }
-
-        // Validasi giliran via TurnManager
         TurnManager tm = plugin.getTurnManager();
+
+        // Validasi battle
         if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
-            player.sendMessage("§cTidak ada battle yang sedang berlangsung.");
-            player.sendMessage("§7Gunakan /atk hanya saat combat aktif.");
+            player.sendMessage("§cTidak ada battle aktif. Gunakan /battle start.");
             return true;
         }
 
         if (!tm.isPlayerTurn(player)) {
             player.sendMessage("§cBukan giliran kamu! Tunggu giliran.");
+            player.sendMessage("§7Turn: " + tm.getCurrentTurnDisplay());
             return true;
         }
 
-        tm.selectAction(player);
+        if (args.length < 1) {
+            player.sendMessage("§eGunakan: /atk <melee|ranged> [target]");
+            return true;
+        }
 
-        String mobId = args[0];
-        LivingEntity target = findTarget(mobId);
+        String attackType = args[0].toLowerCase();
+        boolean melee = !attackType.equals("ranged");
+
+        // Cari target
+        LivingEntity target;
+        if (args.length >= 2) {
+            target = findTarget(tm, args[1]);
+        } else {
+            // Auto-target: musuh pertama dalam turn order
+            target = findFirstMobTarget(tm);
+        }
 
         if (target == null) {
-            player.sendMessage("§cMob dengan id '" + mobId + "' tidak ditemukan.");
+            player.sendMessage("§cTarget tidak ditemukan. Gunakan TAB untuk lihat target.");
             return true;
         }
 
-        // Attack roll: d20 + STR modifier
-        int strMod = plugin.getPlayerDataStore().getAbilityModifier(player, "str");
-        int attackRoll = DiceRoller.roll(20);
-        int totalAttack = attackRoll + strMod;
-
-        // Damage: weapon damage (d8 default) + STR modifier
-        int damageRoll = DiceRoller.roll(8);
-        int totalDamage = Math.max(1, damageRoll + strMod);
-
-        // Kritikal? Nat 20 = double damage
-        boolean isCrit = attackRoll == 20;
-        if (isCrit) {
-            totalDamage *= 2;
+        if (target.isDead()) {
+            player.sendMessage("§cTarget sudah mati.");
+            return true;
         }
 
-        // Apply damage ke target
-        double newHp = Math.max(0, target.getHealth() - totalDamage);
-        target.setHealth(newHp);
+        // Select action di TurnManager
+        tm.selectAction(player);
+
+        // Attack resolution
+        CombatEngine.AttackResult result;
+        if (melee) {
+            result = CombatEngine.resolveMeleeAttack(plugin, player, target);
+        } else {
+            result = CombatEngine.resolveRangedAttack(plugin, player, target);
+        }
+
+        // Apply damage
+        int actualDmg = 0;
+        if (result.hit) {
+            actualDmg = CombatEngine.applyDamage(target, result.totalDamage, result.damageType);
+        }
 
         // Title display
-        String mainText = isCrit ? "§e§lCRIT! " + totalAttack : "Attack: " + totalAttack;
-        String subText = "DMG: " + totalDamage + " | " + target.getName() + " HP: " + (int) newHp;
+        String mainText = result.hit
+                ? (result.crit ? "§e§lCRIT " + result.totalAttack : "§aHit! " + result.totalAttack)
+                : "§7Miss! " + result.totalAttack;
+        String subText = (result.hit ? "§c-" + actualDmg + " §7| " : "") +
+                target.getName() + " §7[AC:" + result.targetAC + "]";
         TitleDisplay.showCombatResult(player, mainText, subText);
 
-        // Broadcast hasil ke semua player
-        String critMsg = isCrit ? " §e§lCRITICAL HIT!" : "";
+        // Combat log broadcast
+        String atkType = melee ? "§7[Melee]" : "§7[Ranged]";
+        String hitMsg = result.hit
+                ? "§aHIT §7| " + atkType + " §7→ DMG: §c" + actualDmg
+                        + " §7(" + result.damageType + ")"
+                : "§7MISS §7| " + atkType + " §7→ AC " + result.targetAC + " too high";
         Bukkit.broadcastMessage("§c[Combat]§r " + player.getName() + " menyerang "
-                + target.getName() + "! Roll: " + attackRoll + "+" + strMod
-                + " = " + totalAttack + " | DMG: " + totalDamage + critMsg);
+                + target.getName() + "! §7[d20:" + result.attackRoll + "+" + result.attackBonus
+                + "=" + result.totalAttack + " vs AC:" + result.targetAC + "] " + hitMsg);
 
         // Cek target mati
-        if (newHp <= 0) {
-            Bukkit.broadcastMessage("§c" + target.getName() + " has been slain!");
+        if (target.getHealth() <= 0) {
+            Bukkit.broadcastMessage("§c§l" + target.getName() + " has been slain!");
+            tm.removeParticipant(target);
         }
 
-        // Resolve aksi
+        // Resolve → next turn
         tm.resolveAction();
         return true;
     }
 
-    /**
-     * Cari target dari participants TurnManager berdasarkan UUID prefix atau nama.
-     */
-    private LivingEntity findTarget(String mobId) {
-        TurnManager tm = plugin.getTurnManager();
+    private LivingEntity findTarget(TurnManager tm, String partial) {
         for (var entry : tm.getParticipants().entrySet()) {
-            UUID uuid = entry.getKey();
-            LivingEntity entity = entry.getValue();
-            // Skip player targets (players shouldn't attack other players normally)
-            if (entity instanceof Player) continue;
-
-            String uuidStr = uuid.toString().substring(0, Math.min(8, mobId.length()));
-            if (uuidStr.equalsIgnoreCase(mobId.substring(0, Math.min(8, uuidStr.length())))) {
-                return entity;
-            }
-            if (entity.getName() != null && entity.getName().equalsIgnoreCase(mobId)) {
-                return entity;
+            LivingEntity e = entry.getValue();
+            if (e instanceof Player) continue; // skip player targets normally
+            String idStr = entry.getKey().toString().substring(0, 8);
+            if (idStr.toLowerCase().startsWith(partial.toLowerCase())
+                    || (e.getName() != null && e.getName().toLowerCase().contains(partial.toLowerCase()))) {
+                return e;
             }
         }
         return null;
+    }
+
+    private LivingEntity findFirstMobTarget(TurnManager tm) {
+        for (var entry : tm.getParticipants().entrySet()) {
+            if (!(entry.getValue() instanceof Player)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                                                 @NotNull Command command,
+                                                 @NotNull String alias,
+                                                 @NotNull String[] args) {
+        if (args.length == 1) {
+            return List.of("melee", "ranged");
+        }
+        if (args.length == 2) {
+            TurnManager tm = plugin.getTurnManager();
+            List<String> targets = new ArrayList<>();
+            String input = args[1].toLowerCase();
+            for (var entry : tm.getParticipants().entrySet()) {
+                if (entry.getValue() instanceof Player) continue;
+                String id = entry.getKey().toString().substring(0, 8);
+                String name = entry.getValue().getName() != null ? entry.getValue().getName() : id;
+                if (id.toLowerCase().startsWith(input) || name.toLowerCase().startsWith(input)) {
+                    targets.add(name);
+                }
+            }
+            return targets;
+        }
+        return List.of();
     }
 }

@@ -24,3 +24,6 @@ commands:
   newnpc:
     description: Buat NPC penting baru (semua mob type) + simpan template YAML
     usage: /newnpc <npc_id> <display_name> [entity_type] [spawn]
+  battle:
+    description: Battle commands (start, flee, status)
+    usage: /battle <start|flee|status>

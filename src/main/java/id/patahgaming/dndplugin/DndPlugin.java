@@ -4,6 +4,7 @@ import id.patahgaming.dndplugin.ai.DeepSeekClient;
 import id.patahgaming.dndplugin.ai.NarratorService;
 import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
+import id.patahgaming.dndplugin.command.BattleCommand;
 import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
@@ -67,7 +68,9 @@ public final class DndPlugin extends JavaPlugin {
         RollCommand rollCommand = new RollCommand(this);
         getCommand("roll").setExecutor(rollCommand);
         getCommand("roll").setTabCompleter(rollCommand);
-        getCommand("atk").setExecutor(new AtkCommand(this));
+        AtkCommand atkCommand = new AtkCommand(this);
+        getCommand("atk").setExecutor(atkCommand);
+        getCommand("atk").setTabCompleter(atkCommand);
         TalkCommand talkCommand = new TalkCommand(this);
         getCommand("talk").setExecutor(talkCommand);
         getCommand("talk").setTabCompleter(talkCommand);
@@ -80,6 +83,9 @@ public final class DndPlugin extends JavaPlugin {
         DndCommand dndCommand = new DndCommand(this);
         getCommand("dnd").setExecutor(dndCommand);
         getCommand("dnd").setTabCompleter(dndCommand);
+        BattleCommand battleCommand = new BattleCommand(this);
+        getCommand("battle").setExecutor(battleCommand);
+        getCommand("battle").setTabCompleter(battleCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
