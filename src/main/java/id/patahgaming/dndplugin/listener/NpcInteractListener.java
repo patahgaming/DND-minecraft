@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
@@ -40,6 +41,12 @@ public class NpcInteractListener implements Listener {
 
     @EventHandler
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        // Cegah double-fire: event triggered untuk main hand DAN off-hand.
+        // Cuma proses main hand (EquipmentSlot.HAND).
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+
         Entity entity = event.getRightClicked();
 
         if (!entity.getPersistentDataContainer().has(NpcSpawnListener.npcIdKey(), PersistentDataType.STRING)) {
@@ -64,7 +71,24 @@ public class NpcInteractListener implements Listener {
             }
 
             int taskId = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (entity.isValid()) {
+                if (!entity.isValid()) {
+                    unfreezeTasks.remove(entityUuid);
+                    return;
+                }
+
+                // Restore AI: side NPC / villager → aware; important hostile → tetap passive
+                NpcDataStore.NpcRecord rec = plugin.getNpcDataStore().get(
+                        entity.getPersistentDataContainer().get(
+                                NpcSpawnListener.npcIdKey(), PersistentDataType.STRING));
+                if (rec != null && !"VILLAGER".equalsIgnoreCase(rec.entityType)) {
+                    // Important NPC yang bukan villager → tetap passive (disposition != agro)
+                    if (!"agro".equalsIgnoreCase(rec.disposition)) {
+                        mob.setAware(false); // tetap pasif
+                    } else {
+                        mob.setAware(true); // agro → boleh nyerang
+                    }
+                } else {
+                    // Side NPC atau villager → normal AI
                     mob.setAware(true);
                 }
                 unfreezeTasks.remove(entityUuid);
