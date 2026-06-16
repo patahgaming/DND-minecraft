@@ -14,7 +14,7 @@ commands:
     usage: /roll <jenis_tindakan>
   talk:
     description: Mulai dialog dengan NPC (penting atau side)
-    usage: /talk <npc_id>
+    usage: /talk <npc_id> [pesan]
   spawnnpc:
     description: Spawn NPC penting dari template YAML
     usage: /spawnnpc <template_id>

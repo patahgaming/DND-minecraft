@@ -40,16 +40,23 @@ public class TalkCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            player.sendMessage("Gunakan: /talk <npc_id> (pakai TAB untuk auto-complete)");
+            player.sendMessage("Gunakan: /talk <npc_id> [pesan]");
+            player.sendMessage("§7Contoh: /talk elder_marek halo siapa nama kamu?");
             return true;
         }
 
         String npcId = args[0];
 
-        // 1. Cek NpcDataStore dulu (NPC penting/story-critical)
+        // Gabungin sisa args sebagai pesan player (kalau ada)
+        String playerMessage = null;
+        if (args.length > 1) {
+            playerMessage = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+        }
+
+        // 1. Cek NpcDataStore dulu (NPC penting/story-critical) → AI dialog
         NpcDataStore.NpcRecord record = plugin.getNpcDataStore().get(npcId);
         if (record != null) {
-            plugin.getNpcDialogueService().generateDialogue(record, player);
+            plugin.getNpcDialogueService().generateDialogue(record, player, playerMessage);
             return true;
         }
 

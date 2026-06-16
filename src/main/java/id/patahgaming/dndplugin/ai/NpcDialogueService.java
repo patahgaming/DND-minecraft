@@ -26,14 +26,25 @@ public class NpcDialogueService {
     }
 
     /**
-     * Generate dialog NPC penting untuk player tertentu.
-     * Dipanggil dari NpcInteractListener atau TalkCommand.
+     * Generate dialog NPC penting — tanpa player message (greeting, dari interact).
      */
     public void generateDialogue(NpcDataStore.NpcRecord npc, Player player) {
+        generateDialogue(npc, player, null);
+    }
+
+    /**
+     * Generate dialog NPC penting dengan player message spesifik.
+     * Dipanggil dari TalkCommand saat player ketik: /talk <npc_id> <pesan>
+     *
+     * @param npc NPC record dari data store
+     * @param player Player yang ngomong
+     * @param playerMessage Pesan dari player (null kalau cuma greeting)
+     */
+    public void generateDialogue(NpcDataStore.NpcRecord npc, Player player, String playerMessage) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String systemPrompt = buildNpcSystemPrompt(npc);
-                String userPrompt = buildDialoguePrompt(npc, player);
+                String userPrompt = buildDialoguePrompt(npc, player, playerMessage);
 
                 String response = plugin.getDeepSeekClient().complete(systemPrompt, userPrompt);
 
@@ -47,9 +58,12 @@ public class NpcDialogueService {
                 }
 
                 // Append history
-                String historySummary = player.getName() + ": " +
-                        (cleanResponse.length() > 80 ? cleanResponse.substring(0, 80) + "..." : cleanResponse);
-                plugin.getNpcDataStore().appendHistory(npc.npcId, historySummary);
+                String inputSummary = playerMessage != null
+                        ? player.getName() + ": \"" + (playerMessage.length() > 60 ? playerMessage.substring(0, 60) + "..." : playerMessage) + "\""
+                        : player.getName() + " greets you";
+                plugin.getNpcDataStore().appendHistory(npc.npcId, inputSummary);
+                String responseSummary = cleanResponse.length() > 80 ? cleanResponse.substring(0, 80) + "..." : cleanResponse;
+                plugin.getNpcDataStore().appendHistory(npc.npcId, npc.displayName + ": " + responseSummary);
 
                 // Kirim response ke player (whisper)
                 Bukkit.getScheduler().runTask(plugin, () -> {
@@ -131,7 +145,7 @@ public class NpcDialogueService {
     /**
      * Build user prompt — party context + what the player says.
      */
-    private String buildDialoguePrompt(NpcDataStore.NpcRecord npc, Player player) {
+    private String buildDialoguePrompt(NpcDataStore.NpcRecord npc, Player player, String playerMessage) {
         StringBuilder sb = new StringBuilder();
         PlayerDataStore store = plugin.getPlayerDataStore();
 
@@ -150,10 +164,16 @@ public class NpcDialogueService {
 
         sb.append("Current story context: ").append(store.getPartyCurrentNode()).append("\n\n");
 
-        sb.append("The player greets you. Respond naturally based on your disposition. ");
-        sb.append("If friendly, offer useful information about the area. ");
-        sb.append("If neutral, be cautious but civil. ");
-        sb.append("If agro, be hostile and threatening.");
+        if (playerMessage != null && !playerMessage.isBlank()) {
+            sb.append("The player says to you: \"").append(playerMessage).append("\"\n\n");
+            sb.append("Respond naturally to what the player said. Stay in character. ");
+            sb.append("If friendly, be helpful. If neutral, be cautious. If agro, be hostile.");
+        } else {
+            sb.append("The player greets you. Respond naturally based on your disposition. ");
+            sb.append("If friendly, offer useful information about the area. ");
+            sb.append("If neutral, be cautious but civil. ");
+            sb.append("If agro, be hostile and threatening.");
+        }
 
         return sb.toString();
     }
