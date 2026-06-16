@@ -80,6 +80,11 @@ public class NpcDataStore {
         return records.get(npcId);
     }
 
+    /** Return semua NPC record yang terdaftar (untuk TabCompleter). */
+    public java.util.Collection<NpcRecord> getAll() {
+        return records.values();
+    }
+
     public NpcRecord getOrCreate(String npcId, String displayName) {
         return records.computeIfAbsent(npcId, id -> {
             NpcRecord r = new NpcRecord();

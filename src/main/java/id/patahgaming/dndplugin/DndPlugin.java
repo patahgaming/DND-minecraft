@@ -65,7 +65,9 @@ public final class DndPlugin extends JavaPlugin {
         getCommand("roll").setExecutor(rollCommand);
         getCommand("roll").setTabCompleter(rollCommand);
         getCommand("atk").setExecutor(new AtkCommand(this));
-        getCommand("talk").setExecutor(new TalkCommand(this));
+        TalkCommand talkCommand = new TalkCommand(this);
+        getCommand("talk").setExecutor(talkCommand);
+        getCommand("talk").setTabCompleter(talkCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
