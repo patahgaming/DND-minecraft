@@ -173,6 +173,11 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
             villager.setProfession(profs[(int) (Math.random() * profs.length)]);
         }
 
+        // Hostile mob NPCs: jangan auto-attack — cuma nyerang pas disposition jadi agro
+        if (entity instanceof org.bukkit.entity.Mob mob && !(entity instanceof Villager)) {
+            mob.setAware(false);
+        }
+
         player.sendMessage("§aSpawned: §6§l" + record.displayName + " §7(" + entityType + ")");
     }
 

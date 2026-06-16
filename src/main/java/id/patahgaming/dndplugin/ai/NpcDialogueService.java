@@ -3,8 +3,12 @@ package id.patahgaming.dndplugin.ai;
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.NpcDataStore;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
+import id.patahgaming.dndplugin.listener.NpcSpawnListener;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 
 /**
  * AI NPC Dialogue — handle dialog dengan NPC penting.
@@ -69,9 +73,10 @@ public class NpcDialogueService {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player.sendMessage("§e[" + npc.displayName + "]§r " + cleanResponse);
 
-                    // Jika agro, kasih tahu player
+                    // Jika agro, aktifkan mob AI dan target player
                     if ("agro".equals(disposition)) {
                         player.sendMessage("§c" + npc.displayName + " becomes hostile!");
+                        activateNpcHostility(npc.npcId, player);
                     }
                 });
 
@@ -202,6 +207,26 @@ public class NpcDialogueService {
     /**
      * Bersihkan tag disposition dari response.
      */
+    /**
+     * Aktifkan mob hostility — cari NPC entity di world berdasarkan npc_id PDC,
+     * enable AI, dan set target ke player.
+     */
+    private void activateNpcHostility(String npcId, Player target) {
+        for (Entity entity : target.getWorld().getEntities()) {
+            if (entity.getPersistentDataContainer().has(
+                    NpcSpawnListener.npcIdKey(), PersistentDataType.STRING)) {
+                String foundId = entity.getPersistentDataContainer().get(
+                        NpcSpawnListener.npcIdKey(), PersistentDataType.STRING);
+                if (npcId.equals(foundId) && entity instanceof Mob mob) {
+                    mob.setAware(true);
+                    mob.setTarget(target);
+                    plugin.getLogger().info("NPC " + npcId + " is now hostile toward " + target.getName());
+                    break;
+                }
+            }
+        }
+    }
+
     private String cleanResponse(String response) {
         return response.replaceAll("(?i)\\[(FRIENDLY|NEUTRAL|AGRO|HOSTILE|PEACEFUL|DAMAI)\\]", "").trim();
     }

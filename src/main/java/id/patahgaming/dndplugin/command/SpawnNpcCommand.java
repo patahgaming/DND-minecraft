@@ -97,6 +97,11 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
             villager.setProfession(profs[(int) (Math.random() * profs.length)]);
         }
 
+        // Hostile mob NPCs: disable auto-attack AI — cuma nyerang kalau narator perintah (agro)
+        if (entity instanceof org.bukkit.entity.Mob mob && !(entity instanceof Villager)) {
+            mob.setAware(false); // freeze sampai disposition jadi agro
+        }
+
         player.sendMessage("§aSpawned: §6§l" + record.displayName + " §7(id: " + record.npcId + ", type: " + entityType + ")");
         player.sendMessage("§7Gunakan §e/talk " + record.npcId + "§7 untuk dialog.");
         return true;
