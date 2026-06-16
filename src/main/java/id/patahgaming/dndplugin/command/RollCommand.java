@@ -130,17 +130,32 @@ public class RollCommand implements CommandExecutor, TabCompleter {
     private void resolvePendingRoll(Player player,
                                      id.patahgaming.dndplugin.engine.combat.PendingRoll pending,
                                      int roll, int total, int modifier) {
-        // Clear pending — roll sudah dilakukan
+        // Clear pending
         id.patahgaming.dndplugin.engine.combat.PendingRoll.clear(player);
 
-        // Narration via NarratorService
-        var ctx = new id.patahgaming.dndplugin.ai.NarratorContext(
-                id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_SUCCESS, player.getName())
+        // Determine success/failure: for skill checks, DC is usually 10-15
+        // Untuk death save: 10+ success, nat1 = fail
+        boolean success;
+        if (pending.rollType == id.patahgaming.dndplugin.engine.combat.PendingRoll.RollType.DEATH_SAVE) {
+            success = roll >= 10;
+        } else {
+            success = total >= 10; // generic DC 10 check
+        }
+
+        var trigger = success
+                ? id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_SUCCESS
+                : id.patahgaming.dndplugin.ai.NarratorContext.TriggerType.SKILL_CHECK_FAIL;
+
+        var ctx = new id.patahgaming.dndplugin.ai.NarratorContext(trigger, player.getName())
                 .addResult("skill", pending.rollType.name().toLowerCase())
                 .addResult("roll", String.valueOf(roll))
                 .addResult("total", String.valueOf(total))
                 .addResult("modifier", String.valueOf(modifier))
                 .withRecipient(id.patahgaming.dndplugin.ai.NarratorContext.Recipient.SELF);
+
+        if (!success) {
+            ctx.addResult("outcome", "failure");
+        }
         plugin.getNarratorService().narrate(ctx);
     }
 

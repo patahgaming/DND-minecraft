@@ -124,7 +124,7 @@ public class NarratorService {
                 String fallback = ctx.fallbackTemplate != null
                         ? injectVars(ctx.fallbackTemplate, ctx) : null;
                 if (fallback != null) {
-                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(fallback, ctx.recipient));
+                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(ctx, fallback));
                 }
             }
         });
@@ -148,13 +148,14 @@ public class NarratorService {
                 String response = plugin.getDeepSeekClient().complete(buildSystemPrompt(), sb.toString());
 
                 // Broadcast to PARTY (default for batches)
-                Bukkit.getScheduler().runTask(plugin, () -> routePlain("§6[Narrator]§r " + response, Recipient.PARTY));
+                Bukkit.getScheduler().runTask(plugin, () ->
+                        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("§6[Narrator]§r " + response)));
 
             } catch (Exception e) {
                 // Fallback: kirim per event
                 for (NarratorContext ctx : batch) {
                     String fb = ctx.fallbackTemplate != null ? injectVars(ctx.fallbackTemplate, ctx) : describeEvent(ctx);
-                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(fb, ctx.recipient));
+                    Bukkit.getScheduler().runTask(plugin, () -> routePlain(ctx, fb));
                 }
             }
         });
@@ -188,7 +189,7 @@ public class NarratorService {
             case COMBAT_DAMAGE_RECEIVED -> templateDamageReceived(ctx);
             case DEATH_SAVE_SUCCESS -> templateDeathSave(ctx, "success");
             case DEATH_SAVE_FAIL -> templateDeathSave(ctx, "fail");
-            case DEATH_SAVE_STABILIZE -> templateDeathSave(ctx, "stabilize");
+            case DEATH_SAVE_STABILIZE -> templateDeathSave(ctx, "stabilized");
             case DEATH_SAVE_DEAD -> templateDeathSave(ctx, "dead");
             case SAVING_THROW_SUCCESS -> templateSavingThrow(ctx, true);
             case SAVING_THROW_FAIL -> templateSavingThrow(ctx, false);
@@ -282,7 +283,7 @@ public class NarratorService {
         return String.format(
                 "%s is making death saves. Roll: %s (%s, count: %s). Narrate in 1 sentence. Do NOT say 'death save' literally.%s",
                 ctx.subject, roll, outcome, count,
-                setFallback(ctx, outcome.equals("stabilize") ? ctx.subject + " stabilizes!" :
+                setFallback(ctx, outcome.equals("stabilized") ? ctx.subject + " stabilizes!" :
                         outcome.equals("dead") ? ctx.subject + " has died..." :
                         ctx.subject + " struggles... (" + count + ")"));
     }
@@ -372,7 +373,7 @@ public class NarratorService {
 
     private void route(NarratorContext ctx, String narration) {
         String formatted = "§6[Narrator]§r " + narration;
-        routePlain(formatted, ctx.recipient);
+        routePlain(ctx, formatted);
 
         // Special: death saves — SELF + PARTY dapet narasi berbeda
         if (ctx.triggerType.name().startsWith("DEATH_SAVE") && ctx.recipient == Recipient.PARTY) {
@@ -383,12 +384,11 @@ public class NarratorService {
         }
     }
 
-    private void routePlain(String message, Recipient recipient) {
-        switch (recipient) {
+    private void routePlain(NarratorContext ctx, String message) {
+        switch (ctx.recipient) {
             case SELF -> {
-                // hanya player subject — cari dari online players
-                // (untuk sekarang broadcast ke semua, nanti bisa di-refine)
-                Bukkit.broadcastMessage(message);
+                Player p = Bukkit.getPlayerExact(ctx.subject);
+                if (p != null && p.isOnline()) p.sendMessage(message);
             }
             case PARTY -> Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(message));
             case BROADCAST -> Bukkit.broadcastMessage(message);
