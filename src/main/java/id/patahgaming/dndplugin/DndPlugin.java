@@ -5,6 +5,7 @@ import id.patahgaming.dndplugin.ai.NarratorService;
 import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
 import id.patahgaming.dndplugin.command.BattleCommand;
+import id.patahgaming.dndplugin.command.CastCommand;
 import id.patahgaming.dndplugin.command.CharacterCommand;
 import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
@@ -18,6 +19,7 @@ import id.patahgaming.dndplugin.data.SrdRulesStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
+import id.patahgaming.dndplugin.listener.CombatListener;
 import id.patahgaming.dndplugin.listener.NpcInteractListener;
 import id.patahgaming.dndplugin.listener.NpcSpawnListener;
 import id.patahgaming.dndplugin.listener.PlayerJoinListener;
@@ -64,6 +66,7 @@ public final class DndPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new NpcSpawnListener(this), this);
         getServer().getPluginManager().registerEvents(new NpcInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new CombatListener(this), this);
 
         // Tick loop: cek POI bbox setiap 2 detik (diambil dari config)
         int intervalSeconds = getConfig().getInt("engine.poi-tick-interval-seconds", 2);
@@ -96,6 +99,9 @@ public final class DndPlugin extends JavaPlugin {
         CharacterCommand characterCommand = new CharacterCommand(this);
         getCommand("character").setExecutor(characterCommand);
         getCommand("character").setTabCompleter(characterCommand);
+        CastCommand castCommand = new CastCommand(this);
+        getCommand("cast").setExecutor(castCommand);
+        getCommand("cast").setTabCompleter(castCommand);
 
         getLogger().info("DnD AI System enabled.");
     }

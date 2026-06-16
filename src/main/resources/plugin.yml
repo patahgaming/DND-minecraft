@@ -30,3 +30,6 @@ commands:
   character:
     description: Character creation and info
     usage: /character <create|info> [class] [name] [race]
+  cast:
+    description: Cast spell saat combat
+    usage: /cast <spell> [target]
