@@ -312,27 +312,39 @@ Phase 2 — World & Story                                [███████�
   [x] StoryTreeStore — load/parse story node YAML (trigger type, bbox, narrative, choices)
   [x] NarratorService — on-rail render + off-rail generate (DeepSeek HTTP async)
 
-Phase 3 — NPC                                          [█████████░] 4.5/5
-  [x] NpcSpawnListener — auto-naming villager/hostile + PDC tagging
-  [x] NpcInteractListener — freeze on interact + auto-unfreeze 5s timer
-  [x] NpcDataStore — history per-NPC (shared party) + thread-safe
-  [x] NpcDialogueService — disposition decision (agro/teman/damai) via DeepSeek async
+Phase 3 — NPC                                          [██████████] 5/5 DONE
+  [x] NpcSpawnListener — auto-naming villager/hostile + PDC tagging + color coding
+  [x] NpcInteractListener — freeze on interact + auto-unfreeze + EquipmentSlot guard
+  [x] NpcDataStore — history per-NPC shared party + thread-safe + auto-save YAML
+  [x] NpcDialogueService — disposition decision via DeepSeek async + backstory context
   [x] Side NPC — 1-bubble cached dialog (pool statis 10 greetings)
+  [+] /newnpc + /spawnnpc — create + spawn NPC dari semua mob type + backstory field
 
-Phase 4 — Combat                                       [███████░░░] 5/7
+Phase 4 — Combat                                       [██████████] 7/7 DONE
   [x] InitiativeRoller (d20+DEX, sort descending + tiebreaker)
-  [x] TurnManager state machine (WAITING_TURN → ACTION_SELECTED → RESOLVING → NEXT_TURN)
+  [x] TurnManager — state machine + auto-mob AI + mob attack resolution
   [x] RollCommand (Brigadier + suggestion) — 14 roll types + ability mapping
-  [x] AtkCommand — attack roll d20+STR, damage d8+STR, crit detection
+  [x] AtkCommand — melee/ranged, d20+mod+prof vs AC, hit/miss, crit, damage types
+  [x] CombatEngine — AC calculation, resistance/vulnerability, proficiency bonus
   [x] Conditions.java (poisoned/stunned/unconscious/blinded via PotionEffects)
   [x] Death saving throws (d20, nat1=2fail, nat20=1HP, 3success=stabil, 3fail=mati)
   [x] TitleDisplay untuk hasil roll/combat
+  [+] /battle start|flee|status — full battle initiation + flee mechanic
 
-Phase 5 — Rules & Polish                              [██░░░░░░░░] 1/4
-  [ ] SrdRulesStore — load SRD YAML, filter by keyword
-  [x] TalkCommand + dialog flow (terhubung NpcDialogueService async)
+Phase 5 — Rules & Polish                              [████████░░] 2/4
+  [x] SrdRulesStore — load 1.4MB 5esrd.yaml + keyword index + search API
+  [x] TalkCommand — full dialog flow + player message + tab-complete NPC search
   [ ] Whisper/public chat routing untuk narasi
   [ ] Testing end-to-end (localhost, on-demand)
+
+Phase 6 — Infrastructure (beyond original plan)        [██████████] DONE
+  [+] /dnd reload — hot swap config + YAML tanpa restart server
+  [+] /dnd save|version|stop|start — admin controls
+  [+] EntityTargetEvent guard — hostile NPCs passive unless disposition=agro
+  [+] Scoreboard auto-refresh via tick loop (HP/max HP sync)
+  [+] Attribute API max_health — respect /attribute command
+  [+] Versioning rule: MAJOR.MINOR.PATCH.BUILD (1.0.0.20)
+  [+] Git repo + .gitignore + README.md + CLAUDE.md
 ```
 
 ---
