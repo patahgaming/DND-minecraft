@@ -94,7 +94,7 @@ public class NpcDataStore {
         });
     }
 
-    /** Tambah entri history baru ke NPC (shared party). */
+    /** Tambah entri history baru ke NPC (shared party). Auto-save ke YAML. */
     public void appendHistory(String npcId, String summary) {
         NpcRecord record = records.get(npcId);
         if (record == null) return;
@@ -103,12 +103,18 @@ public class NpcDataStore {
         entry.put("timestamp", Instant.now().toString());
         entry.put("summary", summary);
         record.history.add(entry);
+
+        // Auto-save setelah history berubah
+        save(npcId);
     }
 
     public void setDisposition(String npcId, String disposition) {
         NpcRecord record = records.get(npcId);
         if (record != null) {
             record.disposition = disposition;
+
+            // Auto-save setelah disposition berubah
+            save(npcId);
         }
     }
 
