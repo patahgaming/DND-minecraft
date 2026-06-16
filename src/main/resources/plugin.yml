@@ -13,5 +13,8 @@ commands:
     description: Roll dice untuk tindakan yang membutuhkan check
     usage: /roll <jenis_tindakan>
   talk:
-    description: Mulai dialog dengan NPC penting
+    description: Mulai dialog dengan NPC (penting atau side)
     usage: /talk <npc_id>
+  spawnnpc:
+    description: Spawn NPC penting dari template YAML
+    usage: /spawnnpc <template_id>

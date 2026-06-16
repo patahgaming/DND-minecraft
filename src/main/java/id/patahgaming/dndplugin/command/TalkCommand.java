@@ -45,17 +45,46 @@ public class TalkCommand implements CommandExecutor, TabCompleter {
         }
 
         String npcId = args[0];
-        NpcDataStore.NpcRecord record = plugin.getNpcDataStore().get(npcId);
 
-        if (record == null) {
-            player.sendMessage("NPC dengan id '" + npcId + "' tidak ditemukan.");
-            player.sendMessage("§7Gunakan TAB untuk melihat daftar NPC yang tersedia.");
+        // 1. Cek NpcDataStore dulu (NPC penting/story-critical)
+        NpcDataStore.NpcRecord record = plugin.getNpcDataStore().get(npcId);
+        if (record != null) {
+            plugin.getNpcDialogueService().generateDialogue(record, player);
             return true;
         }
 
-        // Panggil NpcDialogueService (DeepSeek async) — AI handle dialog + disposition
-        plugin.getNpcDialogueService().generateDialogue(record, player);
+        // 2. Fallback: cari NPC terdekat dengan PDC tag yang cocok (side NPC)
+        Entity nearbyNpc = findNearbyNpc(player, npcId);
+        if (nearbyNpc != null) {
+            String npcName = nearbyNpc.getPersistentDataContainer().get(
+                    NpcSpawnListener.npcNameKey(), PersistentDataType.STRING);
+            String displayName = npcName != null ? npcName : nearbyNpc.getName();
+            String greeting = plugin.getNpcDialogueService().generateSideNpcGreeting(
+                    npcId, player.getLocation().getBlock().getBiome().toString().toLowerCase());
+            player.sendMessage("§7[" + displayName + "]§r " + greeting);
+            return true;
+        }
+
+        // 3. Gak ketemu
+        player.sendMessage("§cNPC dengan id '" + npcId + "' tidak ditemukan.");
+        player.sendMessage("§7Gunakan TAB untuk melihat daftar NPC yang tersedia.");
+        player.sendMessage("§7Atau klik kanan NPC terdekat untuk dialog.");
         return true;
+    }
+
+    /** Cari NPC terdekat yang npc_id PDC-nya cocok. */
+    private Entity findNearbyNpc(Player player, String npcId) {
+        for (Entity entity : player.getNearbyEntities(30, 15, 30)) {
+            if (entity.getPersistentDataContainer().has(
+                    NpcSpawnListener.npcIdKey(), PersistentDataType.STRING)) {
+                String id = entity.getPersistentDataContainer().get(
+                        NpcSpawnListener.npcIdKey(), PersistentDataType.STRING);
+                if (npcId.equalsIgnoreCase(id)) {
+                    return entity;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
