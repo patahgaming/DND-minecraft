@@ -1,6 +1,7 @@
 package id.patahgaming.dndplugin.listener;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.data.NpcDataStore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
@@ -98,5 +100,50 @@ public class NpcSpawnListener implements Listener {
 
     public static NamespacedKey npcTypeKey() {
         return KEY_NPC_TYPE;
+    }
+
+    /**
+     * Cegah NPC penting (hostile mob) nyerang player otomatis.
+     * Zombie/Skeleton dll punya vanilla AI yang auto-target player.
+     * Kita cancel targeting kecuali disposition = agro.
+     *
+     * Ini nge-handle kasus di mana YAML udah friendly tapi mob masih nyerang.
+     */
+    @EventHandler
+    public void onEntityTarget(EntityTargetEvent event) {
+        Entity entity = event.getEntity();
+
+        // Cuma proses entity yang di-tag NPC oleh plugin ini
+        if (!entity.getPersistentDataContainer().has(KEY_NPC_ID, PersistentDataType.STRING)) {
+            return;
+        }
+
+        // Cuma proses NPC penting (punya npc_type = important)
+        String npcType = entity.getPersistentDataContainer().get(KEY_NPC_TYPE, PersistentDataType.STRING);
+        if (!NPC_TYPE_IMPORTANT.equals(npcType)) {
+            return; // side NPC — bebas
+        }
+
+        // Villager gak perlu dicegah (gak nyerang)
+        if (entity instanceof Villager) {
+            return;
+        }
+
+        // Cek disposition dari NpcDataStore
+        String npcId = entity.getPersistentDataContainer().get(KEY_NPC_ID, PersistentDataType.STRING);
+        if (npcId == null) return;
+
+        NpcDataStore.NpcRecord record = plugin.getNpcDataStore().get(npcId);
+        if (record == null) return;
+
+        // Kalau disposition BUKAN agro → cancel targeting
+        if (!"agro".equalsIgnoreCase(record.disposition)) {
+            event.setCancelled(true);
+            // Force set target ke null
+            if (entity instanceof org.bukkit.entity.Mob mob) {
+                mob.setTarget(null);
+            }
+        }
+        // Kalau agro → biarin targeting (gak di-cancel)
     }
 }
