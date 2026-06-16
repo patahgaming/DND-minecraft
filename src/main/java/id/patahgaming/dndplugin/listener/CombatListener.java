@@ -3,6 +3,7 @@ package id.patahgaming.dndplugin.listener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -11,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 
 import java.time.Duration;
@@ -105,16 +107,16 @@ public class CombatListener implements Listener {
 
         if (max <= 0) return;
 
-        // Build HP bar text
+        // Get BASE name (jangan baca existing custom name — itu udah stacking!)
+        String baseName = getBaseName(entity);
+
+        // Build HP bar
         int barLength = 10;
         int filled = (int) Math.round((current / max) * barLength);
         filled = Math.max(0, Math.min(barLength, filled));
 
-        String color;
         double ratio = current / max;
-        if (ratio > 0.6) color = "§a";       // Green
-        else if (ratio > 0.3) color = "§e";  // Yellow
-        else color = "§c";                     // Red
+        String color = ratio > 0.6 ? "§a" : ratio > 0.3 ? "§e" : "§c";
 
         StringBuilder bar = new StringBuilder("§7[");
         bar.append(color);
@@ -123,34 +125,34 @@ public class CombatListener implements Listener {
         }
         bar.append("§7] §f").append((int) current).append("/").append((int) max);
 
-        // Cari existing custom name (kalau ada NPC name, jangan di-overwrite)
-        String existingName = null;
-        if (entity.customName() != null) {
-            existingName = entity.customName().toString();
-        }
-
-        // Set nama entity dengan HP bar
-        String baseName;
-        if (entity instanceof Player player) {
-            // Player: keep vanilla name, show HP bar below via team suffix
-            // For simplicity, use the player's display name
-            baseName = player.getName();
-        } else {
-            baseName = entity.getName();
-        }
-
-        // For mobs: set custom name with HP below
-        String displayText;
-        if (existingName != null && !existingName.isEmpty()
-                && !existingName.startsWith("§7[")) {
-            // Preserve NPC custom name (gold/white bold) + tambah HP di bawah
-            displayText = existingName + "\n" + bar.toString();
-        } else {
-            displayText = baseName + "\n" + bar.toString();
-        }
-
+        // Always regenerate fresh: base_name + "\n" + hp_bar
+        String displayText = baseName + "\n" + bar.toString();
         entity.setCustomNameVisible(true);
         entity.customName(Component.text(displayText));
+    }
+
+    /**
+     * Get the BASE name of an entity WITHOUT any HP bar.
+     * NPC name from PDC (with color), or vanilla name for untagged mobs.
+     */
+    private static String getBaseName(LivingEntity entity) {
+        if (entity instanceof Player player) {
+            return player.getName();
+        }
+
+        // Check PDC for NPC tags
+        var pdc = entity.getPersistentDataContainer();
+        String npcName = pdc.get(new NamespacedKey("dndplugin", "npc_name"), PersistentDataType.STRING);
+        String npcType = pdc.get(new NamespacedKey("dndplugin", "npc_type"), PersistentDataType.STRING);
+
+        if (npcName != null) {
+            // NPC penting = gold bold, side = white bold
+            String prefix = "important".equals(npcType) ? "§6§l" : "§f§l";
+            return prefix + npcName;
+        }
+
+        // Regular mob: vanilla name
+        return entity.getName();
     }
 
     /** Force refresh HP bar untuk semua entity dalam battle. */
