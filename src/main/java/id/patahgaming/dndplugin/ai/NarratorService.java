@@ -90,6 +90,7 @@ public class NarratorService {
 
     /**
      * System prompt: set kepribadian AI narator — omniscient, fantasy DM style.
+     * Include relevant SRD rules kalau ada keyword yang match di story node.
      */
     private String buildNarratorSystemPrompt() {
         return """
@@ -105,6 +106,20 @@ public class NarratorService {
                 - NEVER break character or reference "the AI" or "the game"
                 - Respond in English (the game uses English for narration)
                 """;
+    }
+
+    /**
+     * Lookup SRD rules yang relevan untuk narrative node.
+     * Cari keyword dari narrative text + node id.
+     */
+    private String lookupRelevantRules(StoryTreeStore.StoryNode node) {
+        if (plugin.getSrdRulesStore() == null || !plugin.getSrdRulesStore().isLoaded()) {
+            return "";
+        }
+        // Cari keyword dari narrative text (kata benda spesifik)
+        String[] keywords = {"stealth", "perception", "survival", "investigation",
+                "combat", "grapple", "cover", "difficult terrain", "jump"};
+        return plugin.getSrdRulesStore().searchMultiple(keywords);
     }
 
     /**

@@ -131,6 +131,9 @@ public class NpcDialogueService {
             sb.append("Reference details from it naturally when relevant.\n\n");
         }
 
+        // SRD rules context (kalau relevan — conditions, skill checks)
+        appendRelevantSrdRules(sb);
+
         sb.append("Personality rules:\n");
         sb.append("- Stay in character ALWAYS — never break the fourth wall\n");
         sb.append("- Respond in 1-3 sentences, conversational tone\n");
@@ -224,6 +227,22 @@ public class NpcDialogueService {
                     break;
                 }
             }
+        }
+    }
+
+    /** Append SRD rules yang relevan dengan NPC context ke prompt. */
+    private void appendRelevantSrdRules(StringBuilder sb) {
+        if (plugin.getSrdRulesStore() == null || !plugin.getSrdRulesStore().isLoaded()) {
+            return;
+        }
+        // Lookup rules yang sering muncul di dialog NPC
+        String rules = plugin.getSrdRulesStore().searchMultiple(
+                "stealth", "perception", "persuasion", "deception", "intimidation",
+                "insight", "investigation", "survival", "grapple", "cover");
+        if (!rules.isEmpty()) {
+            sb.append("D&D 5e SRD Rules Reference (use these for skill checks):\n");
+            sb.append(rules);
+            sb.append("\n");
         }
     }
 

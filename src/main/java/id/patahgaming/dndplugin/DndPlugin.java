@@ -13,6 +13,7 @@ import id.patahgaming.dndplugin.command.TalkCommand;
 import id.patahgaming.dndplugin.data.NpcDataStore;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import id.patahgaming.dndplugin.data.PoiStore;
+import id.patahgaming.dndplugin.data.SrdRulesStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
@@ -33,6 +34,7 @@ public final class DndPlugin extends JavaPlugin {
     private NarratorService narratorService;
     private NpcDialogueService npcDialogueService;
     private TurnManager turnManager;
+    private SrdRulesStore srdRulesStore;
     private PoiTickTask poiTickTask;
 
     @Override
@@ -52,6 +54,10 @@ public final class DndPlugin extends JavaPlugin {
         this.narratorService = new NarratorService(this);
         this.npcDialogueService = new NpcDialogueService(this);
         this.turnManager = new TurnManager(this);
+
+        // SRD rules (load async biar startup cepet)
+        this.srdRulesStore = new SrdRulesStore(this);
+        getServer().getScheduler().runTaskAsynchronously(this, () -> srdRulesStore.load());
 
         // Listeners
         getServer().getPluginManager().registerEvents(new NpcSpawnListener(this), this);
@@ -165,6 +171,10 @@ public final class DndPlugin extends JavaPlugin {
         return turnManager;
     }
 
+    public SrdRulesStore getSrdRulesStore() {
+        return srdRulesStore;
+    }
+
     public PoiTickTask getPoiTickTask() {
         return poiTickTask;
     }
@@ -182,6 +192,9 @@ public final class DndPlugin extends JavaPlugin {
         this.npcDataStore = new NpcDataStore(this);
         this.storyTreeStore = new StoryTreeStore(this);
         this.poiStore = new PoiStore(this);
+        if (this.srdRulesStore != null) {
+            this.srdRulesStore.reload();
+        }
         getLogger().info("Data stores reloaded from disk.");
     }
 }
