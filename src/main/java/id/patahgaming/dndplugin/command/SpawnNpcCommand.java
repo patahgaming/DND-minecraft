@@ -62,31 +62,42 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Parse entity type dari template
+        EntityType entityType;
+        try {
+            entityType = EntityType.valueOf(record.entityType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            entityType = EntityType.VILLAGER;
+        }
+
         // Spawn NPC di lokasi player
         World world = player.getWorld();
         Location loc = player.getLocation().add(
                 player.getLocation().getDirection().normalize().multiply(2));
 
-        Villager villager = (Villager) world.spawnEntity(loc, EntityType.VILLAGER);
+        org.bukkit.entity.LivingEntity entity = (org.bukkit.entity.LivingEntity)
+                world.spawnEntity(loc, entityType);
 
-        // Set PDC tags — npc_id = template id, display_name = dari YAML, type = important
-        villager.getPersistentDataContainer().set(
+        // Set PDC tags
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcIdKey(), PersistentDataType.STRING, record.npcId);
-        villager.getPersistentDataContainer().set(
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcNameKey(), PersistentDataType.STRING, record.displayName);
-        villager.getPersistentDataContainer().set(
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcTypeKey(), PersistentDataType.STRING, NpcSpawnListener.NPC_TYPE_IMPORTANT);
 
-        // Important NPC = gold bold §6§l
-        villager.customName(Component.text("§6§l" + record.displayName));
-        villager.setCustomNameVisible(true);
-        villager.setAware(true);
+        // Important NPC = gold bold
+        entity.customName(Component.text("§6§l" + record.displayName));
+        entity.setCustomNameVisible(true);
 
-        // Set profession random biar gak monoton
-        Villager.Profession[] profs = Villager.Profession.values();
-        villager.setProfession(profs[(int) (Math.random() * profs.length)]);
+        // Villager-specific
+        if (entity instanceof Villager villager) {
+            villager.setAware(true);
+            Villager.Profession[] profs = Villager.Profession.values();
+            villager.setProfession(profs[(int) (Math.random() * profs.length)]);
+        }
 
-        player.sendMessage("§aSpawned NPC: " + record.displayName + " §7(id: " + record.npcId + ")");
+        player.sendMessage("§aSpawned: §6§l" + record.displayName + " §7(id: " + record.npcId + ", type: " + entityType + ")");
         player.sendMessage("§7Gunakan §e/talk " + record.npcId + "§7 untuk dialog.");
         return true;
     }

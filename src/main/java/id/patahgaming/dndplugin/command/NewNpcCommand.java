@@ -25,18 +25,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * /newnpc <npc_id> <display_name> [spawn]
+ * /newnpc <npc_id> <display_name> [entity_type] [spawn]
  *
- * Membuat NPC penting baru:
- * 1. Bikin template YAML di data/npcs/<npc_id>.yml
- * 2. Daftarin ke NpcDataStore in-memory
- * 3. Kalau ada arg "spawn", langsung spawn di lokasi player
+ * Membuat NPC penting baru. Bisa spawn semua jenis mob Minecraft.
+ *
+ * Entity types: VILLAGER, ZOMBIE, SKELETON, WITCH, PILLAGER,
+ * VINDICATOR, EVOKER, WANDERING_TRADER, IRON_GOLEM, ENDERMAN, SPIDER
  *
  * Contoh:
  *   /newnpc blacksmith_garin "Garin the Blacksmith"
- *   /newnpc forest_witch "Morgana the Witch" spawn
+ *   /newnpc zombie_king "King Rotjaw" ZOMBIE spawn
+ *   /newnpc forest_witch "Morgana" WITCH spawn
  */
 public class NewNpcCommand implements CommandExecutor, TabCompleter {
+
+    private static final List<String> VALID_ENTITY_TYPES = List.of(
+            "VILLAGER", "ZOMBIE", "SKELETON", "WITCH",
+            "PILLAGER", "VINDICATOR", "EVOKER", "WANDERING_TRADER",
+            "IRON_GOLEM", "ENDERMAN", "SPIDER"
+    );
 
     private final DndPlugin plugin;
 
@@ -53,49 +60,56 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 2) {
-            player.sendMessage("§eGunakan: /newnpc <npc_id> <display_name> [spawn]");
-            player.sendMessage("§7Contoh: /newnpc blacksmith_garin \"Garin the Blacksmith\" spawn");
-            player.sendMessage("§7  npc_id: lowercase + underscore (blacksmith_garin)");
-            player.sendMessage("§7  display_name: nama yang muncul di game (bisa pakai spasi)");
-            player.sendMessage("§7  spawn: optional, langsung spawn NPC");
+            player.sendMessage("§eGunakan: /newnpc <npc_id> <display_name> [entity_type] [spawn]");
+            player.sendMessage("§7Contoh: /newnpc zombie_king \"King Rotjaw\" ZOMBIE spawn");
+            player.sendMessage("§7  entity_type: VILLAGER, ZOMBIE, SKELETON, WITCH, dll");
+            player.sendMessage("§7  spawn: langsung spawn NPC setelah dibuat");
             return true;
         }
 
         String npcId = args[0].toLowerCase().replace(" ", "_");
 
-        // Gabungin sisa args jadi display_name (kecuali "spawn" di akhir)
+        // Parse entity_type dan spawn flag dari args
+        String entityType = "VILLAGER";
         boolean doSpawn = false;
         int nameEnd = args.length;
-        if (args[args.length - 1].equalsIgnoreCase("spawn")) {
-            doSpawn = true;
-            nameEnd = args.length - 1;
+
+        for (int i = 1; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.equalsIgnoreCase("spawn")) {
+                doSpawn = true;
+                nameEnd = Math.min(nameEnd, i);
+            } else if (VALID_ENTITY_TYPES.contains(arg.toUpperCase())) {
+                entityType = arg.toUpperCase();
+                nameEnd = Math.min(nameEnd, i);
+            }
         }
 
         String displayName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, nameEnd));
 
-        // Validasi: jangan overwrite existing
+        // Validasi
         NpcDataStore.NpcRecord existing = plugin.getNpcDataStore().get(npcId);
         if (existing != null) {
-            player.sendMessage("§cNPC dengan id '" + npcId + "' sudah ada!");
-            player.sendMessage("§7Nama: " + existing.displayName);
+            player.sendMessage("§cNPC id '" + npcId + "' sudah ada: " + existing.displayName);
             player.sendMessage("§7Gunakan /spawnnpc " + npcId + " untuk spawn.");
             return true;
         }
 
-        // 1. Bikin record di NpcDataStore
+        // Buat record
         NpcDataStore.NpcRecord record = plugin.getNpcDataStore().getOrCreate(npcId, displayName);
         record.disposition = "neutral";
-        record.storyNode = plugin.getPlayerDataStore().getPartyCurrentNode(); // ikut story node saat ini
+        record.entityType = entityType;
+        record.backstory = "(Add backstory here — edit data/npcs/" + npcId + ".yml)";
+        record.storyNode = plugin.getPlayerDataStore().getPartyCurrentNode();
 
-        // 2. Simpan ke file YAML
+        // Simpan YAML
         saveNpcTemplate(record);
 
-        player.sendMessage("§aNPC template created: §6§l" + displayName + " §7(id: " + npcId + ")");
-        player.sendMessage("§7File: data/npcs/" + npcId + ".yml");
-        player.sendMessage("§7Gunakan §e/spawnnpc " + npcId + "§7 untuk spawn kapan saja.");
-        player.sendMessage("§7Gunakan §e/talk " + npcId + "§7 untuk dialog.");
+        player.sendMessage("§aNPC created: §6§l" + displayName + " §7(id: " + npcId + ", type: " + entityType + ")");
+        player.sendMessage("§7  File: data/npcs/" + npcId + ".yml");
+        player.sendMessage("§7  Edit YAML untuk isi backstory karakter.");
+        player.sendMessage("§7  §e/spawnnpc " + npcId + " §7— spawn  §e/talk " + npcId + " §7— dialog");
 
-        // 3. Spawn kalau diminta
         if (doSpawn) {
             spawnNpc(player, record);
         }
@@ -103,17 +117,16 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Simpan NPC template ke file YAML. */
     private void saveNpcTemplate(NpcDataStore.NpcRecord record) {
         File npcsFolder = new File(plugin.getDataFolder(), "data/npcs");
-        if (!npcsFolder.exists()) {
-            npcsFolder.mkdirs();
-        }
+        if (!npcsFolder.exists()) npcsFolder.mkdirs();
 
         Map<String, Object> data = new HashMap<>();
         data.put("npc_id", record.npcId);
         data.put("display_name", record.displayName);
         data.put("disposition", record.disposition);
+        data.put("entity_type", record.entityType);
+        data.put("backstory", record.backstory);
         data.put("story_node", record.storyNode);
         data.put("history", new ArrayList<>());
 
@@ -125,33 +138,42 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
             yaml.dump(data, writer);
             plugin.getLogger().info("Created NPC template: " + file.getPath());
         } catch (Exception e) {
-            plugin.getLogger().warning("Failed to save NPC template for " + record.npcId + ": " + e.getMessage());
+            plugin.getLogger().warning("Failed to save NPC template: " + e.getMessage());
         }
     }
 
-    /** Spawn NPC di depan player. */
     private void spawnNpc(Player player, NpcDataStore.NpcRecord record) {
         World world = player.getWorld();
         Location loc = player.getLocation().add(
                 player.getLocation().getDirection().normalize().multiply(2));
 
-        Villager villager = (Villager) world.spawnEntity(loc, EntityType.VILLAGER);
+        EntityType entityType;
+        try {
+            entityType = EntityType.valueOf(record.entityType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            entityType = EntityType.VILLAGER;
+        }
 
-        villager.getPersistentDataContainer().set(
+        org.bukkit.entity.LivingEntity entity = (org.bukkit.entity.LivingEntity)
+                world.spawnEntity(loc, entityType);
+
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcIdKey(), PersistentDataType.STRING, record.npcId);
-        villager.getPersistentDataContainer().set(
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcNameKey(), PersistentDataType.STRING, record.displayName);
-        villager.getPersistentDataContainer().set(
+        entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcTypeKey(), PersistentDataType.STRING, NpcSpawnListener.NPC_TYPE_IMPORTANT);
 
-        villager.customName(Component.text("§6§l" + record.displayName));
-        villager.setCustomNameVisible(true);
-        villager.setAware(true);
+        entity.customName(Component.text("§6§l" + record.displayName));
+        entity.setCustomNameVisible(true);
 
-        Villager.Profession[] profs = Villager.Profession.values();
-        villager.setProfession(profs[(int) (Math.random() * profs.length)]);
+        if (entity instanceof Villager villager) {
+            villager.setAware(true);
+            Villager.Profession[] profs = Villager.Profession.values();
+            villager.setProfession(profs[(int) (Math.random() * profs.length)]);
+        }
 
-        player.sendMessage("§aSpawned: §6§l" + record.displayName);
+        player.sendMessage("§aSpawned: §6§l" + record.displayName + " §7(" + entityType + ")");
     }
 
     @Override
@@ -159,15 +181,15 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
                                                  @NotNull Command command,
                                                  @NotNull String alias,
                                                  @NotNull String[] args) {
-        if (args.length == 1) {
-            // Suggest npc_id placeholder
-            return List.of("npc_id_baru");
-        }
-        if (args.length == 2) {
-            return List.of("\"NPC Name\"");
-        }
-        if (args.length == 3) {
-            return List.of("spawn");
+        if (args.length == 1) return List.of("npc_id_baru");
+        if (args.length >= 2) {
+            List<String> suggestions = new ArrayList<>();
+            String input = args[args.length - 1].toUpperCase();
+            for (String type : VALID_ENTITY_TYPES) {
+                if (type.startsWith(input)) suggestions.add(type);
+            }
+            suggestions.add("spawn");
+            return suggestions;
         }
         return List.of();
     }

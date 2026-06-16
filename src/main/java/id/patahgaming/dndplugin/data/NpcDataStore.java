@@ -26,6 +26,8 @@ public class NpcDataStore {
         public String displayName;
         public String disposition = "neutral";
         public String storyNode;
+        public String entityType = "VILLAGER";  // EntityType enum name — bukan cuma Villager
+        public String backstory = "";            // Background story karakter sebelum ketemu party
         public List<Map<String, Object>> history = Collections.synchronizedList(new ArrayList<>());
     }
 
@@ -59,6 +61,10 @@ public class NpcDataStore {
                 record.disposition = String.valueOf(data.getOrDefault("disposition", "neutral"));
                 Object node = data.get("story_node");
                 record.storyNode = node != null ? node.toString() : null;
+                Object entityType = data.get("entity_type");
+                record.entityType = entityType != null ? entityType.toString() : "VILLAGER";
+                Object backstory = data.get("backstory");
+                record.backstory = backstory != null ? backstory.toString() : "";
 
                 Object history = data.get("history");
                 if (history instanceof List<?> list) {
@@ -128,6 +134,10 @@ public class NpcDataStore {
         data.put("disposition", record.disposition);
         if (record.storyNode != null) {
             data.put("story_node", record.storyNode);
+        }
+        data.put("entity_type", record.entityType);
+        if (record.backstory != null && !record.backstory.isEmpty()) {
+            data.put("backstory", record.backstory);
         }
         data.put("history", record.history);
 

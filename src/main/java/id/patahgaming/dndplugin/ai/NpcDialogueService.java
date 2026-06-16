@@ -117,6 +117,15 @@ public class NpcDialogueService {
         sb.append("Your name: ").append(npc.displayName).append("\n");
         sb.append("Your current disposition toward the party: ").append(npc.disposition).append("\n\n");
 
+        // Backstory — karakter background sebelum ketemu party
+        if (npc.backstory != null && !npc.backstory.isBlank()
+                && !npc.backstory.startsWith("(Add backstory")) {
+            sb.append("YOUR BACKSTORY (this is what you know about yourself):\n");
+            sb.append(npc.backstory).append("\n\n");
+            sb.append("Use this backstory to inform your responses. ");
+            sb.append("Reference details from it naturally when relevant.\n\n");
+        }
+
         sb.append("Personality rules:\n");
         sb.append("- Stay in character ALWAYS — never break the fourth wall\n");
         sb.append("- Respond in 1-3 sentences, conversational tone\n");

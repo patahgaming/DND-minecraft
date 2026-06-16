@@ -2,4 +2,13 @@ npc_id: elder_marek
 display_name: "Elder Marek"
 disposition: neutral
 story_node: forest_entrance
+entity_type: VILLAGER
+backstory: >
+  Marek is the village elder of Thornhollow, a small settlement at the edge of
+  the Darkwood Forest. He was once a ranger who patrolled these woods for 30
+  years before retiring. His knowledge of the forest paths, hidden caves, and
+  ancient ruins is unmatched. He lost his left eye to a dire wolf 10 years ago
+  and has been wary of adventurers ever since. He knows about the old cave
+  entrance but refuses to go near it — something inside changed years ago that
+  he won't speak of openly.
 history: []

@@ -19,5 +19,5 @@ commands:
     description: Spawn NPC penting dari template YAML
     usage: /spawnnpc <template_id>
   newnpc:
-    description: Buat NPC penting baru + simpan ke template YAML
-    usage: /newnpc <npc_id> <display_name> [spawn]
+    description: Buat NPC penting baru (semua mob type) + simpan template YAML
+    usage: /newnpc <npc_id> <display_name> [entity_type] [spawn]
