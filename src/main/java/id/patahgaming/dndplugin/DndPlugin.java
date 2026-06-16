@@ -4,6 +4,7 @@ import id.patahgaming.dndplugin.ai.DeepSeekClient;
 import id.patahgaming.dndplugin.ai.NarratorService;
 import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
+import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
 import id.patahgaming.dndplugin.command.SpawnNpcCommand;
 import id.patahgaming.dndplugin.command.TalkCommand;
@@ -72,6 +73,9 @@ public final class DndPlugin extends JavaPlugin {
         SpawnNpcCommand spawnNpcCommand = new SpawnNpcCommand(this);
         getCommand("spawnnpc").setExecutor(spawnNpcCommand);
         getCommand("spawnnpc").setTabCompleter(spawnNpcCommand);
+        NewNpcCommand newNpcCommand = new NewNpcCommand(this);
+        getCommand("newnpc").setExecutor(newNpcCommand);
+        getCommand("newnpc").setTabCompleter(newNpcCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
