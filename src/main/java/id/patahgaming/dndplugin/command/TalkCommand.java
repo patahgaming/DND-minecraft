@@ -43,8 +43,8 @@ public class TalkCommand implements CommandExecutor {
             return true;
         }
 
-        // TODO: panggil NpcDialogueService (DeepSeek) async dengan context lengkap.
-        player.sendMessage("[" + record.displayName + "] ... (dialog AI belum diimplementasi)");
+        // Panggil NpcDialogueService (DeepSeek async) — AI handle dialog + disposition
+        plugin.getNpcDialogueService().generateDialogue(record, player);
         return true;
     }
 }

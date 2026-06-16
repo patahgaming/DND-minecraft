@@ -300,36 +300,37 @@ hadapan player.
 ## Urutan Development
 
 ```
-Phase 1 — Foundation
-  [ ] pom.xml + plugin.yml + DndPlugin.java skeleton
-  [ ] PlayerDataStore (PDC + YAML sync) — char sheet baca/tulis
-  [ ] ScoreboardManager — sidebar display dasar
-  [ ] DiceRoller (d20+modifier, unit-testable)
+Phase 1 — Foundation                                    [██████████] 4/4 DONE
+  [x] pom.xml + plugin.yml + DndPlugin.java skeleton
+  [x] PlayerDataStore (PDC + YAML sync) — char sheet baca/tulis
+  [x] ScoreboardManager — sidebar display dasar + 6 ability scores + auto-refresh HP/level
+  [x] DiceRoller (d20+modifier, unit-testable)
 
-Phase 2 — World & Story
-  [ ] PoiStore — load YAML POI manual
-  [ ] PoiTickTask — 2s loop, ALL_PLAYERS_IN_BBOX & SINGLE_PLAYER_EVENT
-  [ ] StoryTreeStore — load/parse story node YAML
-  [ ] NarratorService — on-rail render + off-rail generate (DeepSeek HTTP)
+Phase 2 — World & Story                                [██████████] 4/4 DONE
+  [x] PoiStore — load YAML POI manual
+  [x] PoiTickTask — configurable interval, ALL_PLAYERS_IN_BBOX & SINGLE_PLAYER_EVENT, dedup trigger
+  [x] StoryTreeStore — load/parse story node YAML (trigger type, bbox, narrative, choices)
+  [x] NarratorService — on-rail render + off-rail generate (DeepSeek HTTP async)
 
-Phase 3 — NPC
-  [ ] NpcSpawnListener — auto-naming villager/hostile
-  [ ] NpcInteractListener — freeze on interact
-  [ ] NpcDataStore — history per-NPC (shared party)
-  [ ] NpcDialogueService — disposition decision (agro/teman/damai/sleight-of-hand)
-  [ ] Side NPC — 1-bubble cached dialog
+Phase 3 — NPC                                          [█████████░] 4.5/5
+  [x] NpcSpawnListener — auto-naming villager/hostile + PDC tagging
+  [x] NpcInteractListener — freeze on interact + auto-unfreeze 5s timer
+  [x] NpcDataStore — history per-NPC (shared party) + thread-safe
+  [x] NpcDialogueService — disposition decision (agro/teman/damai) via DeepSeek async
+  [x] Side NPC — 1-bubble cached dialog (pool statis 10 greetings)
 
-Phase 4 — Combat
-  [ ] InitiativeRoller (d20+DEX, sort)
-  [ ] TurnManager state machine
-  [ ] AtkCommand, RollCommand (Brigadier + suggestion)
-  [ ] Conditions.java (poisoned/stunned/unconscious/blinded)
-  [ ] Death saving throws
-  [ ] TitleDisplay untuk hasil roll/combat
+Phase 4 — Combat                                       [███████░░░] 5/7
+  [x] InitiativeRoller (d20+DEX, sort descending + tiebreaker)
+  [x] TurnManager state machine (WAITING_TURN → ACTION_SELECTED → RESOLVING → NEXT_TURN)
+  [x] RollCommand (Brigadier + suggestion) — 14 roll types + ability mapping
+  [x] AtkCommand — attack roll d20+STR, damage d8+STR, crit detection
+  [x] Conditions.java (poisoned/stunned/unconscious/blinded via PotionEffects)
+  [x] Death saving throws (d20, nat1=2fail, nat20=1HP, 3success=stabil, 3fail=mati)
+  [x] TitleDisplay untuk hasil roll/combat
 
-Phase 5 — Rules & Polish
+Phase 5 — Rules & Polish                              [██░░░░░░░░] 1/4
   [ ] SrdRulesStore — load SRD YAML, filter by keyword
-  [ ] TalkCommand + dialog flow lengkap
+  [x] TalkCommand + dialog flow (terhubung NpcDialogueService async)
   [ ] Whisper/public chat routing untuk narasi
   [ ] Testing end-to-end (localhost, on-demand)
 ```

@@ -1,0 +1,189 @@
+package id.patahgaming.dndplugin.engine.combat;
+
+import id.patahgaming.dndplugin.DndPlugin;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Turn-based combat state machine:
+ *
+ *   WAITING_TURN → ACTION_SELECTED → RESOLVING → NEXT_TURN
+ *
+ * - Hanya satu participant yang aktif per giliran
+ * - /atk dan /roll hanya valid saat giliran player aktif
+ * - HP update → scoreboard sidebar di-refresh oleh listener yang sudah ada
+ */
+public class TurnManager {
+
+    public enum CombatState {
+        WAITING_TURN,    // Menunggu participant saat ini memilih aksi
+        ACTION_SELECTED, // Aksi sudah dipilih, sedang di-resolve
+        RESOLVING,       // Animasi/efek sedang berjalan
+    }
+
+    public enum BattleState {
+        INACTIVE,  // Tidak ada battle
+        ACTIVE     // Battle sedang berlangsung
+    }
+
+    private final DndPlugin plugin;
+    private BattleState battleState = BattleState.INACTIVE;
+    private CombatState combatState = CombatState.WAITING_TURN;
+
+    private final List<InitiativeRoller.InitiativeEntry> turnOrder = new ArrayList<>();
+    private int currentTurnIndex = 0;
+    private int roundNumber = 0;
+
+    private final Map<UUID, LivingEntity> participants = new HashMap<>();
+
+    public TurnManager(DndPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    /**
+     * Mulai battle — roll initiative, set state ACTIVE, mulai round 1.
+     */
+    public List<InitiativeRoller.InitiativeEntry> startBattle(List<LivingEntity> battleParticipants) {
+        participants.clear();
+        for (LivingEntity e : battleParticipants) {
+            participants.put(e.getUniqueId(), e);
+        }
+
+        turnOrder.clear();
+        turnOrder.addAll(InitiativeRoller.rollInitiative(plugin, battleParticipants));
+
+        currentTurnIndex = 0;
+        roundNumber = 1;
+        battleState = BattleState.ACTIVE;
+        combatState = CombatState.WAITING_TURN;
+
+        // Log turn order
+        plugin.getLogger().info("=== Battle Started — Round " + roundNumber + " ===");
+        for (int i = 0; i < turnOrder.size(); i++) {
+            var entry = turnOrder.get(i);
+            plugin.getLogger().info((i + 1) + ". " + entry.displayName
+                    + " (" + entry.roll + " + " + entry.dexModifier + " = " + entry.total + ")");
+        }
+
+        // Broadcast turn order
+        StringBuilder sb = new StringBuilder("§c=== Initiative ===§r");
+        for (int i = 0; i < turnOrder.size(); i++) {
+            var e = turnOrder.get(i);
+            sb.append("\n§e").append(i + 1).append(". ").append(e.displayName)
+                    .append(" §7(").append(e.total).append(")");
+        }
+        String msg = sb.toString();
+        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(msg));
+
+        return turnOrder;
+    }
+
+    /**
+     * Panggil setelah aksi participant saat ini selesai di-resolve.
+     * Maju ke participant berikutnya atau next round.
+     */
+    public void nextTurn() {
+        currentTurnIndex++;
+        combatState = CombatState.WAITING_TURN;
+
+        // Cek battle selesai? (semua musuh mati atau semua player mati)
+        if (checkBattleEnd()) {
+            endBattle();
+            return;
+        }
+
+        // Wrap around ke round berikutnya
+        if (currentTurnIndex >= turnOrder.size()) {
+            currentTurnIndex = 0;
+            roundNumber++;
+            Bukkit.getOnlinePlayers().forEach(p ->
+                    p.sendMessage("§c=== Round " + roundNumber + " ===§r"));
+        }
+
+        var current = turnOrder.get(currentTurnIndex);
+        LivingEntity entity = participants.get(current.entityUuid);
+        if (entity instanceof Player player) {
+            player.sendMessage("§aGiliran kamu! Gunakan /atk <mob_id> atau /roll <jenis>");
+        }
+    }
+
+    /**
+     * Set state ke ACTION_SELECTED saat player pakai /atk atau /roll.
+     */
+    public void selectAction(Player player) {
+        if (battleState != BattleState.ACTIVE) {
+            player.sendMessage("§cTidak ada battle yang sedang berlangsung.");
+            return;
+        }
+        if (combatState != CombatState.WAITING_TURN) {
+            player.sendMessage("§cBukan giliran kamu atau aksi sedang di-resolve.");
+            return;
+        }
+
+        var current = turnOrder.get(currentTurnIndex);
+        if (!current.entityUuid.equals(player.getUniqueId())) {
+            player.sendMessage("§cBukan giliran kamu! Tunggu giliran.");
+            return;
+        }
+
+        combatState = CombatState.ACTION_SELECTED;
+    }
+
+    /**
+     * Resolve aksi → set RESOLVING, lalu auto-next turn.
+     */
+    public void resolveAction() {
+        combatState = CombatState.RESOLVING;
+        // Auto-next setelah resolve (bisa ditambah delay animasi nanti)
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L); // 1 detik
+    }
+
+    /** Cek apakah battle harus berakhir. */
+    private boolean checkBattleEnd() {
+        boolean allPlayersDead = participants.values().stream()
+                .filter(e -> e instanceof Player)
+                .allMatch(e -> e.isDead());
+        boolean allMobsDead = participants.values().stream()
+                .filter(e -> !(e instanceof Player))
+                .allMatch(LivingEntity::isDead);
+
+        return allPlayersDead || allMobsDead || participants.size() <= 1;
+    }
+
+    /** Akhiri battle. */
+    public void endBattle() {
+        battleState = BattleState.INACTIVE;
+        combatState = CombatState.WAITING_TURN;
+        turnOrder.clear();
+        participants.clear();
+        currentTurnIndex = 0;
+        roundNumber = 0;
+
+        Bukkit.getOnlinePlayers().forEach(p ->
+                p.sendMessage("§a=== Battle Ended ===§r"));
+        plugin.getLogger().info("Battle ended.");
+    }
+
+    // --- Getters ---
+
+    public BattleState getBattleState() { return battleState; }
+    public CombatState getCombatState() { return combatState; }
+    public int getCurrentTurnIndex() { return currentTurnIndex; }
+    public int getRoundNumber() { return roundNumber; }
+    public List<InitiativeRoller.InitiativeEntry> getTurnOrder() { return turnOrder; }
+    public Map<UUID, LivingEntity> getParticipants() { return participants; }
+
+    /** Cek apakah player tertentu sedang mendapat giliran. */
+    public boolean isPlayerTurn(Player player) {
+        if (battleState != BattleState.ACTIVE) return false;
+        if (currentTurnIndex >= turnOrder.size()) return false;
+        return turnOrder.get(currentTurnIndex).entityUuid.equals(player.getUniqueId());
+    }
+}

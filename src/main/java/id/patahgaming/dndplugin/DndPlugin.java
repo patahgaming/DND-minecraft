@@ -1,6 +1,8 @@
 package id.patahgaming.dndplugin;
 
 import id.patahgaming.dndplugin.ai.DeepSeekClient;
+import id.patahgaming.dndplugin.ai.NarratorService;
+import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
 import id.patahgaming.dndplugin.command.TalkCommand;
@@ -9,6 +11,7 @@ import id.patahgaming.dndplugin.data.PlayerDataStore;
 import id.patahgaming.dndplugin.data.PoiStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
+import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.listener.NpcInteractListener;
 import id.patahgaming.dndplugin.listener.NpcSpawnListener;
 import id.patahgaming.dndplugin.listener.PlayerJoinListener;
@@ -23,6 +26,9 @@ public final class DndPlugin extends JavaPlugin {
     private StoryTreeStore storyTreeStore;
     private PoiStore poiStore;
     private DeepSeekClient deepSeekClient;
+    private NarratorService narratorService;
+    private NpcDialogueService npcDialogueService;
+    private TurnManager turnManager;
     private PoiTickTask poiTickTask;
 
     @Override
@@ -37,8 +43,11 @@ public final class DndPlugin extends JavaPlugin {
         this.storyTreeStore = new StoryTreeStore(this);
         this.poiStore = new PoiStore(this);
 
-        // AI client (DeepSeek API key from config.yml)
+        // AI services (DeepSeek API key from config.yml)
         this.deepSeekClient = new DeepSeekClient(this);
+        this.narratorService = new NarratorService(this);
+        this.npcDialogueService = new NpcDialogueService(this);
+        this.turnManager = new TurnManager(this);
 
         // Listeners
         getServer().getPluginManager().registerEvents(new NpcSpawnListener(this), this);
@@ -122,6 +131,18 @@ public final class DndPlugin extends JavaPlugin {
 
     public DeepSeekClient getDeepSeekClient() {
         return deepSeekClient;
+    }
+
+    public NarratorService getNarratorService() {
+        return narratorService;
+    }
+
+    public NpcDialogueService getNpcDialogueService() {
+        return npcDialogueService;
+    }
+
+    public TurnManager getTurnManager() {
+        return turnManager;
     }
 
     public PoiTickTask getPoiTickTask() {

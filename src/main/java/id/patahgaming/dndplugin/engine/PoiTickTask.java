@@ -89,15 +89,8 @@ public class PoiTickTask extends BukkitRunnable {
     }
 
     /**
-     * Trigger terpenuhi — tandai node sebagai fulfilled, lalu broadcast narasi.
-     *
-     * TODO: Saat NarratorService sudah dibuat, ganti blok ini dengan:
-     *   Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-     *       String narration = plugin.getNarratorService().generate(node, triggerPlayer);
-     *       Bukkit.getScheduler().runTask(plugin, () -> {
-     *           Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(Component.text(narration)));
-     *       });
-     *   });
+     * Trigger terpenuhi — tandai node sebagai fulfilled, panggil NarratorService.
+     * NarratorService menangani async DeepSeek call + broadcast hasil narasi.
      */
     private void onTriggerFulfilled(StoryTreeStore.StoryNode node, Player triggerPlayer) {
         triggeredNodes.add(node.nodeId);
@@ -105,7 +98,7 @@ public class PoiTickTask extends BukkitRunnable {
         plugin.getLogger().info("Story node trigger fulfilled: " + node.nodeId
                 + (triggerPlayer != null ? " by " + triggerPlayer.getName() : " (all players)"));
 
-        // Placeholder narasi langsung — nanti diganti panggilan DeepSeek async
-        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(Component.text(node.narrative)));
+        // Delegasi ke NarratorService (on-rail — player di dalam story tree)
+        plugin.getNarratorService().narrateOnRail(node, triggerPlayer);
     }
 }

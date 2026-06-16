@@ -87,21 +87,14 @@ public class NpcInteractListener implements Listener {
     }
 
     private void handleImportantNpcDialogue(Player player, NpcDataStore.NpcRecord record) {
-        // TODO: panggil NpcDialogueService (DeepSeek) secara ASYNC dengan context:
-        // disposition, history (shared party), story node, player party stats.
-        // Contoh:
-        //   Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-        //       String response = plugin.getNpcDialogueService().generate(record, player);
-        //       Bukkit.getScheduler().runTask(plugin, () -> {
-        //           player.sendMessage(Component.text("[" + record.displayName + "] " + response));
-        //       });
-        //   });
-        player.sendMessage(Component.text("[" + record.displayName + "] ...")
-                .append(Component.text(" (dialog AI belum diimplementasi)")));
+        // Panggil NpcDialogueService (DeepSeek async) — AI yang handle dialog + disposition
+        plugin.getNpcDialogueService().generateDialogue(record, player);
     }
 
     private void handleSideNpcDialogue(Player player, String npcName) {
-        // TODO: generate sekali saat spawn & cache, tampilkan bubble statis di sini.
-        player.sendMessage(Component.text("[" + npcName + "] *menyapa sekilas*"));
+        // Side NPC: generate greeting statis (cached by name), tidak panggil AI
+        String biome = player.getLocation().getBlock().getBiome().toString().toLowerCase();
+        String greeting = plugin.getNpcDialogueService().generateSideNpcGreeting(npcName, biome);
+        player.sendMessage(Component.text("[" + npcName + "] " + greeting));
     }
 }
