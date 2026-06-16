@@ -19,11 +19,19 @@ import java.util.concurrent.ThreadLocalRandom;
  * Auto-generate nama unik untuk Villager (NPC peaceful) dan hostile mob saat spawn.
  * Nama disimpan di PDC sebagai npc_id + npc_name agar bisa direferensikan
  * oleh NPC penting (story-critical) atau side NPC (flavor).
+ *
+ * Color coding:
+ * - Side NPC (natural spawn): §f§l white bold
+ * - Important NPC (via /spawnnpc): §6§l gold bold
  */
 public class NpcSpawnListener implements Listener {
 
+    public static final String NPC_TYPE_IMPORTANT = "important";
+    public static final String NPC_TYPE_SIDE = "side";
+
     private static final NamespacedKey KEY_NPC_ID = new NamespacedKey("dndplugin", "npc_id");
     private static final NamespacedKey KEY_NPC_NAME = new NamespacedKey("dndplugin", "npc_name");
+    private static final NamespacedKey KEY_NPC_TYPE = new NamespacedKey("dndplugin", "npc_type");
 
     // Pool nama sederhana — bisa diperluas/dipindah ke YAML config nanti
     private static final String[] FIRST_NAMES = {
@@ -44,7 +52,7 @@ public class NpcSpawnListener implements Listener {
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         Entity entity = event.getEntity();
-        EntityType type = entity.getType();
+        EntityType type = event.getEntityType();
 
         boolean isVillager = type == EntityType.VILLAGER;
         boolean isHostile = entity instanceof Monster;
@@ -53,7 +61,7 @@ public class NpcSpawnListener implements Listener {
             return; // hanya Villager dan hostile mob yang dapat nama unik
         }
 
-        // Jangan re-tag jika sudah punya npc_id (misal dari plugin lain / persist)
+        // Jangan re-tag jika sudah punya npc_id (dari /spawnnpc atau plugin lain)
         if (entity.getPersistentDataContainer().has(KEY_NPC_ID, PersistentDataType.STRING)) {
             return;
         }
@@ -63,8 +71,10 @@ public class NpcSpawnListener implements Listener {
 
         entity.getPersistentDataContainer().set(KEY_NPC_ID, PersistentDataType.STRING, npcId);
         entity.getPersistentDataContainer().set(KEY_NPC_NAME, PersistentDataType.STRING, npcName);
+        entity.getPersistentDataContainer().set(KEY_NPC_TYPE, PersistentDataType.STRING, NPC_TYPE_SIDE);
 
-        entity.customName(Component.text(npcName));
+        // Side NPC = white bold
+        entity.customName(Component.text("§f§l" + npcName));
         entity.setCustomNameVisible(true);
 
         if (entity instanceof Villager villager) {
@@ -84,5 +94,9 @@ public class NpcSpawnListener implements Listener {
 
     public static NamespacedKey npcNameKey() {
         return KEY_NPC_NAME;
+    }
+
+    public static NamespacedKey npcTypeKey() {
+        return KEY_NPC_TYPE;
     }
 }

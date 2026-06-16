@@ -69,14 +69,16 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
 
         Villager villager = (Villager) world.spawnEntity(loc, EntityType.VILLAGER);
 
-        // Set PDC tags — ini penting: npc_id = template id, display_name = dari YAML
+        // Set PDC tags — npc_id = template id, display_name = dari YAML, type = important
         villager.getPersistentDataContainer().set(
                 NpcSpawnListener.npcIdKey(), PersistentDataType.STRING, record.npcId);
         villager.getPersistentDataContainer().set(
                 NpcSpawnListener.npcNameKey(), PersistentDataType.STRING, record.displayName);
+        villager.getPersistentDataContainer().set(
+                NpcSpawnListener.npcTypeKey(), PersistentDataType.STRING, NpcSpawnListener.NPC_TYPE_IMPORTANT);
 
-        // Set display name
-        villager.customName(Component.text(record.displayName));
+        // Important NPC = gold bold §6§l
+        villager.customName(Component.text("§6§l" + record.displayName));
         villager.setCustomNameVisible(true);
         villager.setAware(true);
 
