@@ -244,6 +244,9 @@ public class CombatEngine {
         double newHp = Math.max(0, target.getHealth() - finalDamage);
         target.setHealth(newHp);
 
+        // Trigger combat feedback (setHealth gak fire EntityDamageEvent)
+        id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
+
         return finalDamage;
     }
 }

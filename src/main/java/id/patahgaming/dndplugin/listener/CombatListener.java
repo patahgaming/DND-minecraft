@@ -1,6 +1,7 @@
 package id.patahgaming.dndplugin.listener;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -26,6 +27,8 @@ import java.time.Duration;
  */
 public class CombatListener implements Listener {
 
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
+
     private final Plugin plugin;
 
     public CombatListener(Plugin plugin) {
@@ -49,8 +52,8 @@ public class CombatListener implements Listener {
 
             // Red flash title ("-3 ❤")
             Title hurtTitle = Title.title(
-                    Component.text("§c-" + (int) event.getFinalDamage() + " ❤"),
-                    Component.text("§7" + (int) newHp + "/" + (int) maxHp + " HP"),
+                    LEGACY.deserialize("§c-" + (int) event.getFinalDamage() + " ❤"),
+                    LEGACY.deserialize("§7" + (int) newHp + "/" + (int) maxHp + " HP"),
                     Title.Times.times(Duration.ZERO, Duration.ofMillis(400), Duration.ofMillis(100))
             );
             player.showTitle(hurtTitle);
@@ -128,7 +131,7 @@ public class CombatListener implements Listener {
         // Always regenerate fresh: base_name + "\n" + hp_bar
         String displayText = baseName + "\n" + bar.toString();
         entity.setCustomNameVisible(true);
-        entity.customName(Component.text(displayText));
+        entity.customName(LEGACY.deserialize(displayText));
     }
 
     /**
