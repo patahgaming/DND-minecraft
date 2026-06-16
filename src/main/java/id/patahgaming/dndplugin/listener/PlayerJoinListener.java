@@ -9,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
@@ -19,8 +20,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * Saat player quit:
  *  - Simpan character sheet ke YAML
  *
- * Saat HP berubah (damage / regen):
- *  - Refresh scoreboard sidebar biar HP selalu sync
+ * Saat HP/level/node berubah:
+ *  - Auto-refresh scoreboard sidebar biar selalu sync
  */
 public class PlayerJoinListener implements Listener {
 
@@ -64,5 +65,16 @@ public class PlayerJoinListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin,
                     () -> ScoreboardManager.refresh(plugin, player), 1L);
         }
+    }
+
+    /**
+     * Refresh scoreboard setelah XP level berubah.
+     * D&D level di-mirror ke Minecraft XP level (1:1 per desain SKILL.md).
+     */
+    @EventHandler
+    public void onPlayerLevelChange(PlayerLevelChangeEvent event) {
+        Player player = event.getPlayer();
+        Bukkit.getScheduler().runTaskLater(plugin,
+                () -> ScoreboardManager.refresh(plugin, player), 1L);
     }
 }

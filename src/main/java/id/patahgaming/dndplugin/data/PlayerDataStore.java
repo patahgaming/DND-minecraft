@@ -157,7 +157,8 @@ public class PlayerDataStore {
 
     /**
      * Set party current node. Ini akan menyimpan node baru ke playerNodeProgress
-     * untuk semua player yang sedang online, dan mereset PoiTickTask triggered set.
+     * untuk semua player yang sedang online, mereset PoiTickTask triggered set,
+     * dan refresh scoreboard semua player.
      */
     public void setPartyCurrentNode(String nodeId) {
         if (nodeId.equals(this.partyCurrentNode)) return;
@@ -173,6 +174,11 @@ public class PlayerDataStore {
         id.patahgaming.dndplugin.engine.PoiTickTask tickTask = plugin.getPoiTickTask();
         if (tickTask != null) {
             Bukkit.getScheduler().runTask(plugin, tickTask::resetForNewNode);
+        }
+
+        // Refresh scoreboard semua player (Node field berubah)
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            id.patahgaming.dndplugin.ui.ScoreboardManager.refresh(plugin, p);
         }
     }
 
