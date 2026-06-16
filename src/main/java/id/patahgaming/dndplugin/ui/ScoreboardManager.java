@@ -1,6 +1,7 @@
 package id.patahgaming.dndplugin.ui;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.attribute.Attribute;
@@ -65,10 +66,18 @@ public class ScoreboardManager {
         int hp = (int) player.getHealth();
         int maxHp = (int) maxHealth;
         int level = store.getLevel(player);
+        String charName = store.getCharacterName(player);
+        String charClass = store.getCharacterClass(player);
+        // Format class name: "Fighter" → "Fighter"
+        try {
+            CharacterClass cc = CharacterClass.fromName(charClass);
+            if (cc != null) charClass = cc.getDisplayName();
+        } catch (Exception ignored) {}
 
-        int line = 10;
+        int line = 12;
+        objective.getScore("§6" + charName).setScore(line--);
+        objective.getScore("Lv" + level + " " + charClass).setScore(line--);
         objective.getScore("HP: " + hp + "/" + maxHp).setScore(line--);
-        objective.getScore("Level: " + level).setScore(line--);
         objective.getScore("STR: " + store.getAbility(player, "str")
                 + " (" + signed(store.getAbilityModifier(player, "str")) + ")").setScore(line--);
         objective.getScore("DEX: " + store.getAbility(player, "dex")

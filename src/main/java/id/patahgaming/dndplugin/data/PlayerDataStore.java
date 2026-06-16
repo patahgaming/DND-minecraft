@@ -34,6 +34,10 @@ public class PlayerDataStore {
     private static final NamespacedKey KEY_INT = key("int");
     private static final NamespacedKey KEY_WIS = key("wis");
     private static final NamespacedKey KEY_CHA = key("cha");
+    private static final NamespacedKey KEY_CLASS = key("class");
+    private static final NamespacedKey KEY_CHAR_NAME = key("char_name");
+    private static final NamespacedKey KEY_RACE = key("race");
+    private static final NamespacedKey KEY_HAS_CHARACTER = key("has_character");
 
     private final DndPlugin plugin;
     private final File playersFolder;
@@ -62,28 +66,82 @@ public class PlayerDataStore {
     }
 
     /**
-     * Inisialisasi karakter baru saat player pertama kali join.
-     * Jika PDC belum ada, coba restore dari YAML backup dulu;
-     * jika YAML juga tidak ada, inisialisasi dengan default stats.
+     * Cek apakah player sudah punya karakter atau belum.
+     * Kalau belum, kasih tahu player buat /character create.
      */
     public void initIfAbsent(Player player) {
         UUID uuid = player.getUniqueId();
         var pdc = player.getPersistentDataContainer();
-        if (!pdc.has(KEY_LEVEL, PersistentDataType.INTEGER)) {
-            // Coba restore dari YAML backup dulu
-            if (!restoreFromYaml(player)) {
-                pdc.set(KEY_LEVEL, PersistentDataType.INTEGER, 1);
-                pdc.set(KEY_STR, PersistentDataType.INTEGER, 10);
-                pdc.set(KEY_DEX, PersistentDataType.INTEGER, 10);
-                pdc.set(KEY_CON, PersistentDataType.INTEGER, 10);
-                pdc.set(KEY_INT, PersistentDataType.INTEGER, 10);
-                pdc.set(KEY_WIS, PersistentDataType.INTEGER, 10);
-                pdc.set(KEY_CHA, PersistentDataType.INTEGER, 10);
-                plugin.getLogger().info("Initialized new character sheet for " + player.getName());
+
+        // Cek tag has_character dulu
+        if (pdc.has(KEY_HAS_CHARACTER, PersistentDataType.STRING)) {
+            // Player udah punya karakter → load metadata dari YAML
+            loadMetadataFromYaml(uuid);
+            return;
+        }
+
+        // Coba restore dari YAML backup
+        if (restoreFromYaml(player)) {
+            pdc.set(KEY_HAS_CHARACTER, PersistentDataType.STRING, "true");
+            loadMetadataFromYaml(uuid);
+            return;
+        }
+
+        // Belum punya karakter — kasih tahu player
+        player.sendMessage("§6§lWelcome to D&D AI System!");
+        player.sendMessage("§7Kamu belum punya karakter. Buat dulu dengan:");
+        player.sendMessage("§e  /character create <class>");
+        player.sendMessage("§7Contoh: §e/character create fighter");
+        player.sendMessage("§7Classes: Fighter, Rogue, Wizard, Cleric, Barbarian, Ranger, Paladin, Warlock, Monk, Druid");
+    }
+
+    /**
+     * Create karakter baru — set class, stats, HP max, proficiency.
+     */
+    public void createCharacter(Player player, CharacterClass charClass, String charName, String race) {
+        var pdc = player.getPersistentDataContainer();
+
+        // Ability scores: standard array [15,14,13,12,10,8] → assign ke primary dulu
+        int[] standardArray = {15, 14, 13, 12, 10, 8};
+        String[] abilities = {"str", "dex", "con", "int", "wis", "cha"};
+        String primary = charClass.getPrimaryAbility();
+
+        // Assign: primary ability dapat 15, lalu 14 dst berdasarkan urutan prioritas
+        Map<String, Integer> scores = new java.util.LinkedHashMap<>();
+        int idx = 0;
+        scores.put(primary, standardArray[idx++]); // primary = 15
+        for (String ab : abilities) {
+            if (!scores.containsKey(ab) && idx < standardArray.length) {
+                scores.put(ab, standardArray[idx++]);
             }
         }
-        // Load metadata (story progress, dll) dari YAML, update party consensus
-        loadMetadataFromYaml(uuid);
+
+        // Write PDC
+        pdc.set(KEY_LEVEL, PersistentDataType.INTEGER, 1);
+        pdc.set(KEY_CLASS, PersistentDataType.STRING, charClass.name());
+        pdc.set(KEY_CHAR_NAME, PersistentDataType.STRING, charName != null ? charName : player.getName());
+        pdc.set(KEY_RACE, PersistentDataType.STRING, race != null ? race : "Human");
+        pdc.set(KEY_HAS_CHARACTER, PersistentDataType.STRING, "true");
+        pdc.set(KEY_STR, PersistentDataType.INTEGER, scores.getOrDefault("str", 10));
+        pdc.set(KEY_DEX, PersistentDataType.INTEGER, scores.getOrDefault("dex", 10));
+        pdc.set(KEY_CON, PersistentDataType.INTEGER, scores.getOrDefault("con", 10));
+        pdc.set(KEY_INT, PersistentDataType.INTEGER, scores.getOrDefault("int", 10));
+        pdc.set(KEY_WIS, PersistentDataType.INTEGER, scores.getOrDefault("wis", 10));
+        pdc.set(KEY_CHA, PersistentDataType.INTEGER, scores.getOrDefault("cha", 10));
+
+        // Set max HP = class base + CON modifier
+        int conMod = getAbilityModifier(player, "con");
+        int maxHP = charClass.getBaseHP() + conMod;
+        player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(maxHP);
+        player.setHealth(maxHP);
+
+        // Log
+        plugin.getLogger().info("Character created: " + charName + " (Lv1 " + charClass.getDisplayName() + ")");
+        player.sendMessage("§a§lCharacter Created!");
+        player.sendMessage("§6  " + charName + " §7— Lv1 " + charClass.getDisplayName() + " (" + race + ")");
+        player.sendMessage("§7  HP: " + maxHP + " | Primary: " + primary.toUpperCase());
+        player.sendMessage("§7  STR:" + scores.get("str") + " DEX:" + scores.get("dex") + " CON:" + scores.get("con")
+                + " INT:" + scores.get("int") + " WIS:" + scores.get("wis") + " CHA:" + scores.get("cha"));
     }
 
     /**
@@ -131,6 +189,22 @@ public class PlayerDataStore {
 
     public int getLevel(Player player) {
         return player.getPersistentDataContainer().getOrDefault(KEY_LEVEL, PersistentDataType.INTEGER, 1);
+    }
+
+    public String getCharacterClass(Player player) {
+        return player.getPersistentDataContainer().getOrDefault(KEY_CLASS, PersistentDataType.STRING, "Fighter");
+    }
+
+    public String getCharacterName(Player player) {
+        return player.getPersistentDataContainer().getOrDefault(KEY_CHAR_NAME, PersistentDataType.STRING, player.getName());
+    }
+
+    public String getRace(Player player) {
+        return player.getPersistentDataContainer().getOrDefault(KEY_RACE, PersistentDataType.STRING, "Human");
+    }
+
+    public boolean hasCharacter(Player player) {
+        return player.getPersistentDataContainer().has(KEY_HAS_CHARACTER, PersistentDataType.STRING);
     }
 
     public int getAbility(Player player, String ability) {
@@ -277,6 +351,11 @@ public class PlayerDataStore {
         stats.put("wis", getAbility(player, "wis"));
         stats.put("cha", getAbility(player, "cha"));
         data.put("stats", stats);
+
+        // Character info
+        data.put("class", getCharacterClass(player));
+        data.put("char_name", getCharacterName(player));
+        data.put("race", getRace(player));
 
         Map<String, Object> storyProgress = new HashMap<>();
         storyProgress.put("current_node", partyCurrentNode);

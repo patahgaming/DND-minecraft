@@ -27,3 +27,6 @@ commands:
   battle:
     description: Battle commands (start, flee, status)
     usage: /battle <start|flee|status>
+  character:
+    description: Character creation and info
+    usage: /character <create|info> [class] [name] [race]

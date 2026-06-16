@@ -5,6 +5,7 @@ import id.patahgaming.dndplugin.ai.NarratorService;
 import id.patahgaming.dndplugin.ai.NpcDialogueService;
 import id.patahgaming.dndplugin.command.AtkCommand;
 import id.patahgaming.dndplugin.command.BattleCommand;
+import id.patahgaming.dndplugin.command.CharacterCommand;
 import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
@@ -92,6 +93,9 @@ public final class DndPlugin extends JavaPlugin {
         BattleCommand battleCommand = new BattleCommand(this);
         getCommand("battle").setExecutor(battleCommand);
         getCommand("battle").setTabCompleter(battleCommand);
+        CharacterCommand characterCommand = new CharacterCommand(this);
+        getCommand("character").setExecutor(characterCommand);
+        getCommand("character").setTabCompleter(characterCommand);
 
         getLogger().info("DnD AI System enabled.");
     }

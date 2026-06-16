@@ -1,6 +1,7 @@
 package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
 import org.bukkit.command.Command;
@@ -74,6 +75,18 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         int modifier = 0;
         if (!ability.isEmpty()) {
             modifier = plugin.getPlayerDataStore().getAbilityModifier(player, ability);
+        }
+
+        // Proficiency bonus: kalau skill ini adalah class skill → +prof
+        if (!ability.isEmpty() && !rollType.equals("initiative") && !rollType.equals("attack")
+                && !rollType.equals("death_save")) {
+            CharacterClass charClass = CharacterClass.fromName(
+                    plugin.getPlayerDataStore().getCharacterClass(player));
+            if (charClass != null && charClass.hasSkillOption(rollType)) {
+                int profBonus = id.patahgaming.dndplugin.engine.combat.CombatEngine
+                        .proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
+                modifier += profBonus;
+            }
         }
 
         // Pisahkan raw d20 roll dan modifier untuk animasi
