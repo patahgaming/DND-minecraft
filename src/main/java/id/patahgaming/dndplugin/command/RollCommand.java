@@ -76,9 +76,13 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             modifier = plugin.getPlayerDataStore().getAbilityModifier(player, ability);
         }
 
-        int total = DiceRoller.rollD20(modifier);
+        // Pisahkan raw d20 roll dan modifier untuk animasi
+        int roll = DiceRoller.roll(20);         // d20 murni (1–20)
+        int total = roll + modifier;
 
-        TitleDisplay.showRollResult(player, formatRollType(rollType), total);
+        // Animasi: 4 flash frame → final color-coded result
+        TitleDisplay.showRollAnimation(plugin, player,
+                formatRollType(rollType), modifier, roll, total);
         return true;
     }
 
