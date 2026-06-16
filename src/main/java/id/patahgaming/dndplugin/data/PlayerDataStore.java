@@ -101,16 +101,21 @@ public class PlayerDataStore {
     public void createCharacter(Player player, CharacterClass charClass, String charName, String race) {
         var pdc = player.getPersistentDataContainer();
 
-        // Ability scores: standard array [15,14,13,12,10,8] → assign ke primary dulu
+        // Ability scores: standard array [15,14,13,12,10,8]
+        // Primary = 15, secondary (CON unless primary is CON) = 14, lalu urutan lain
         int[] standardArray = {15, 14, 13, 12, 10, 8};
-        String[] abilities = {"str", "dex", "con", "int", "wis", "cha"};
         String primary = charClass.getPrimaryAbility();
 
-        // Assign: primary ability dapat 15, lalu 14 dst berdasarkan urutan prioritas
+        // Secondary: CON for HP, unless primary IS CON (then DEX)
+        String secondary = "con".equals(primary) ? "dex" : "con";
+
         Map<String, Integer> scores = new java.util.LinkedHashMap<>();
         int idx = 0;
-        scores.put(primary, standardArray[idx++]); // primary = 15
-        for (String ab : abilities) {
+        scores.put(primary, standardArray[idx++]);   // 15
+        scores.put(secondary, standardArray[idx++]);  // 14
+        // Remaining in order: next most useful
+        String[] rest = {"dex", "str", "wis", "int", "cha"};
+        for (String ab : rest) {
             if (!scores.containsKey(ab) && idx < standardArray.length) {
                 scores.put(ab, standardArray[idx++]);
             }

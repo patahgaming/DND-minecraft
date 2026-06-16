@@ -7,6 +7,7 @@ import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +15,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,48 +34,54 @@ public class CastCommand implements CommandExecutor, TabCompleter {
 
     public record Spell(String id, String name, String damageDice, int damageBonus,
                         CombatEngine.DamageType damageType, String saveAbility, int dcBonus,
-                        String description, boolean requiresAttackRoll) {}
+                        String description, boolean requiresAttackRoll, boolean halfOnSave,
+                        List<String> classes) {}
 
-    // Spell list (SRD basic spells)
+    // Spell list (SRD cantrips + 1st level)
     private static final Map<String, Spell> SPELLS = new LinkedHashMap<>();
     static {
-        addSpell("fire_bolt", "Fire Bolt", "1d10", 0, CombatEngine.DamageType.FIRE,
-                null, 0, "Hurl a mote of fire. Ranged spell attack.", true);
-        addSpell("magic_missile", "Magic Missile", "3d4", 3, CombatEngine.DamageType.FORCE,
-                null, 0, "Three glowing darts. Auto-hit.", false);
-        addSpell("burning_hands", "Burning Hands", "3d6", 0, CombatEngine.DamageType.FIRE,
-                "dex", 0, "15ft cone of fire. DEX save for half.", false);
-        addSpell("chill_touch", "Chill Touch", "1d8", 0, CombatEngine.DamageType.NECROTIC,
-                null, 0, "Ghostly hand. Ranged spell attack.", true);
-        addSpell("shocking_grasp", "Shocking Grasp", "1d8", 0, CombatEngine.DamageType.LIGHTNING,
-                null, 0, "Lightning melee spell attack.", true);
-        addSpell("ray_of_frost", "Ray of Frost", "1d8", 0, CombatEngine.DamageType.COLD,
-                null, 0, "Frigid beam. Ranged spell attack.", true);
-        addSpell("sacred_flame", "Sacred Flame", "1d8", 0, CombatEngine.DamageType.RADIANT,
-                "dex", 0, "Flame-like radiance. DEX save negates.", false);
-        addSpell("poison_spray", "Poison Spray", "1d12", 0, CombatEngine.DamageType.POISON,
-                "con", 0, "Puff of poisonous gas. CON save negates.", false);
-        addSpell("acid_splash", "Acid Splash", "1d6", 0, CombatEngine.DamageType.ACID,
-                "dex", 0, "Bubble of acid. DEX save negates.", false);
-        addSpell("frostbite", "Frostbite", "1d6", 0, CombatEngine.DamageType.COLD,
-                "con", 0, "Numbing cold. CON save negates.", false);
-        addSpell("eldritch_blast", "Eldritch Blast", "1d10", 0, CombatEngine.DamageType.FORCE,
-                null, 0, "Beam of crackling energy. Ranged spell attack.", true);
-        addSpell("word_of_radiance", "Word of Radiance", "1d6", 0, CombatEngine.DamageType.RADIANT,
-                "con", 0, "Holy word burns foes. CON save negates.", false);
+        // All casters get these
+        var arcane = List.of("WIZARD", "WARLOCK");
+        var divine = List.of("CLERIC", "PALADIN", "DRUID");
+        var all = List.of("WIZARD", "WARLOCK", "CLERIC", "DRUID", "PALADIN");
+        // True: half damage on save, False: save negates
+        add("fire_bolt", "Fire Bolt", "1d10", 0, CombatEngine.DamageType.FIRE,
+                null, 0, "Hurl a mote of fire.", true, false, arcane);
+        add("magic_missile", "Magic Missile", "3d4", 3, CombatEngine.DamageType.FORCE,
+                null, 0, "Three glowing darts. Auto-hit.", false, false, arcane);
+        add("burning_hands", "Burning Hands", "3d6", 0, CombatEngine.DamageType.FIRE,
+                "dex", 0, "15ft cone. DEX save for half.", false, true, arcane);
+        add("chill_touch", "Chill Touch", "1d8", 0, CombatEngine.DamageType.NECROTIC,
+                null, 0, "Ghostly hand.", true, false, arcane);
+        add("shocking_grasp", "Shocking Grasp", "1d8", 0, CombatEngine.DamageType.LIGHTNING,
+                null, 0, "Lightning touch.", true, false, arcane);
+        add("ray_of_frost", "Ray of Frost", "1d8", 0, CombatEngine.DamageType.COLD,
+                null, 0, "Frigid beam.", true, false, arcane);
+        add("sacred_flame", "Sacred Flame", "1d8", 0, CombatEngine.DamageType.RADIANT,
+                "dex", 0, "Flame-like radiance. DEX save negates.", false, false, divine);
+        add("poison_spray", "Poison Spray", "1d12", 0, CombatEngine.DamageType.POISON,
+                "con", 0, "Poison gas. CON save negates.", false, false, all);
+        add("acid_splash", "Acid Splash", "1d6", 0, CombatEngine.DamageType.ACID,
+                "dex", 0, "Acid bubble. DEX save negates.", false, false, arcane);
+        add("frostbite", "Frostbite", "1d6", 0, CombatEngine.DamageType.COLD,
+                "con", 0, "Numbing cold. CON save negates.", false, false, all);
+        add("eldritch_blast", "Eldritch Blast", "1d10", 0, CombatEngine.DamageType.FORCE,
+                null, 0, "Crackling beam.", true, false, List.of("WARLOCK"));
+        add("word_of_radiance", "Word of Radiance", "1d6", 0, CombatEngine.DamageType.RADIANT,
+                "con", 0, "Holy word. CON save negates.", false, false, List.of("CLERIC"));
     }
 
-    private static void addSpell(String id, String name, String dice, int bonus,
-                                  CombatEngine.DamageType type, String save, int dcBonus,
-                                  String desc, boolean attackRoll) {
-        SPELLS.put(id.toLowerCase(), new Spell(id, name, dice, bonus, type, save, dcBonus, desc, attackRoll));
+    private static void add(String id, String name, String dice, int bonus,
+                            CombatEngine.DamageType type, String save, int dcBonus,
+                            String desc, boolean attackRoll, boolean halfOnSave,
+                            List<String> classes) {
+        SPELLS.put(id.toLowerCase(), new Spell(id, name, dice, bonus, type, save, dcBonus, desc, attackRoll, halfOnSave, classes));
     }
+
+    private static final NamespacedKey KEY_SPELL_SLOTS = new NamespacedKey("dndplugin", "spell_slots");
+    private static final int MAX_SPELL_SLOTS = 2;
 
     private final DndPlugin plugin;
-
-    // Spell slots per player
-    private final Map<UUID, Integer> spellSlots = new HashMap<>();
-    private static final int MAX_SPELL_SLOTS = 2;
 
     public CastCommand(DndPlugin plugin) {
         this.plugin = plugin;
@@ -118,9 +126,9 @@ public class CastCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Spell slots
-        UUID uuid = player.getUniqueId();
-        int slots = spellSlots.getOrDefault(uuid, MAX_SPELL_SLOTS);
+        // Spell slots (persisted ke PDC)
+        var pdc = player.getPersistentDataContainer();
+        int slots = pdc.getOrDefault(KEY_SPELL_SLOTS, PersistentDataType.INTEGER, MAX_SPELL_SLOTS);
         if (slots <= 0) {
             player.sendMessage("§cSpell slots habis! Istirahat dulu untuk regen.");
             return true;
@@ -136,9 +144,10 @@ public class CastCommand implements CommandExecutor, TabCompleter {
         // Execute spell
         tm.selectAction(player);
         executeSpell(player, spell, target, tm);
-        spellSlots.put(uuid, slots - 1);
+        slots--;
+        pdc.set(KEY_SPELL_SLOTS, PersistentDataType.INTEGER, slots);
 
-        player.sendMessage("§bMana: " + (slots - 1) + "/" + MAX_SPELL_SLOTS + " spell slots left");
+        player.sendMessage("§bMana: " + slots + "/" + MAX_SPELL_SLOTS + " spell slots left");
         return true;
     }
 
@@ -213,29 +222,45 @@ public class CastCommand implements CommandExecutor, TabCompleter {
             hit = totalSave < saveDC; // hit kalau target GAGAL save
 
             if (hit) {
+                // Target FAILED save → full damage
                 int[] dice = parseDice(spell.damageDice);
                 totalDamage = spell.damageBonus;
                 for (int i = 0; i < dice[0]; i++) {
                     totalDamage += DiceRoller.roll(dice[1]);
                 }
                 CombatEngine.applyDamage(target, totalDamage, spell.damageType);
-            } else {
-                totalDamage /= 2; // half damage on save (untuk spell yg biasanya half)
+            } else if (spell.halfOnSave) {
+                // Target SAVED, but spell does half damage
+                int[] dice = parseDice(spell.damageDice);
+                totalDamage = spell.damageBonus;
+                for (int i = 0; i < dice[0]; i++) {
+                    totalDamage += DiceRoller.roll(dice[1]);
+                }
+                totalDamage /= 2;
+                if (totalDamage > 0) CombatEngine.applyDamage(target, totalDamage, spell.damageType);
             }
+            // else: save negates → no damage
 
             caster.playSound(caster.getLocation(), Sound.ENTITY_EVOKER_CAST_SPELL, 0.8f, 1.8f);
 
+            String subText;
+            if (hit) {
+                subText = "§c-" + totalDamage + " §7[" + spell.damageType + "]";
+            } else if (spell.halfOnSave && totalDamage > 0) {
+                subText = "§7Half: -" + totalDamage + " §7[" + spell.damageType + "]";
+            } else {
+                subText = "§aSaved! No damage";
+            }
             TitleDisplay.showCombatResult(caster,
                     hit ? "§d" + spell.name : "§7Saved! " + spell.name,
-                    hit ? "§c-" + totalDamage + " §7[" + spell.damageType + "]"
-                            : "§7Half: -" + totalDamage);
+                    subText);
 
             Bukkit.broadcastMessage("§d[Spell]§r " + caster.getName() + " casts §b" + spell.name
                     + "§r → " + target.getName()
                     + " §7[" + saveAbility.toUpperCase() + " save DC" + saveDC
                     + " | d20:" + saveRoll + "+" + targetSaveMod + "=" + totalSave + "] "
                     + (hit ? "§cFAIL -" + totalDamage + " " + spell.damageType
-                    : "§aSAVED"));
+                    : (spell.halfOnSave && totalDamage > 0 ? "§eSAVED (half: -" + totalDamage + ")" : "§aSAVED")));
         }
 
         if (target.getHealth() <= 0) {
@@ -253,8 +278,15 @@ public class CastCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<Spell> getAvailableSpells(Player player) {
-        // Semua spell tersedia untuk sekarang (bisa dibatasi per class nanti)
-        return new ArrayList<>(SPELLS.values());
+        String playerClass = plugin.getPlayerDataStore().getCharacterClass(player);
+        List<Spell> available = new ArrayList<>();
+        for (Spell s : SPELLS.values()) {
+            if (s.classes.contains(playerClass.toUpperCase())
+                    || s.classes.contains("ALL")) {
+                available.add(s);
+            }
+        }
+        return available;
     }
 
     private LivingEntity findTarget(TurnManager tm, String partial) {

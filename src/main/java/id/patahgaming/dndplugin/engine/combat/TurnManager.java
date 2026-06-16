@@ -94,12 +94,24 @@ public class TurnManager {
      * Panggil setelah aksi participant saat ini selesai di-resolve.
      * Maju ke participant berikutnya atau next round.
      */
+    private int nextTurnDepth = 0;
+    private static final int MAX_NEXT_TURN_DEPTH = 50;
+
     public void nextTurn() {
+        nextTurnDepth++;
+        if (nextTurnDepth > MAX_NEXT_TURN_DEPTH) {
+            plugin.getLogger().warning("nextTurn recursion exceeded! Ending battle.");
+            nextTurnDepth = 0;
+            endBattle();
+            return;
+        }
+
         currentTurnIndex++;
         combatState = CombatState.WAITING_TURN;
 
         // Cek battle selesai? (semua musuh mati atau semua player mati)
         if (checkBattleEnd()) {
+            nextTurnDepth = 0;
             endBattle();
             return;
         }
@@ -157,15 +169,15 @@ public class TurnManager {
 
         if (result.hit) {
             int dmg = CombatEngine.applyDamage(target, result.totalDamage, result.damageType);
-            Bukkit.broadcastMessage("§c[Combat]§r " + mob.getName() + " §7→§r "
-                    + target.getName() + " §c-" + dmg + " HP §7[" + result.damageType + "]");
+            Bukkit.broadcastMessage("§c[Combat]§r " + safeName(mob) + " §7→§r "
+                    + safeName(target) + " §c-" + dmg + " HP §7[" + result.damageType + "]");
 
             if (target.getHealth() <= 0) {
-                Bukkit.broadcastMessage("§c§l" + target.getName() + " is unconscious!");
+                Bukkit.broadcastMessage("§c§l" + safeName(target) + " is unconscious!");
                 removeParticipant(target);
             }
         } else {
-            Bukkit.broadcastMessage("§7[Combat] " + mob.getName() + " misses " + target.getName() + "!");
+            Bukkit.broadcastMessage("§7[Combat] " + safeName(mob) + " misses " + safeName(target) + "!");
         }
 
         // Re-freeze mob setelah giliran
@@ -267,6 +279,13 @@ public class TurnManager {
     public int getRoundNumber() { return roundNumber; }
     public List<InitiativeRoller.InitiativeEntry> getTurnOrder() { return turnOrder; }
     public Map<UUID, LivingEntity> getParticipants() { return participants; }
+
+    /** Safe name: fallback ke type name kalau getName() null (custom name override). */
+    private String safeName(LivingEntity e) {
+        if (e instanceof Player p) return p.getName();
+        String name = e.getName();
+        return name != null ? name : e.getType().name();
+    }
 
     /** Cek apakah player tertentu sedang mendapat giliran. */
     public boolean isPlayerTurn(Player player) {

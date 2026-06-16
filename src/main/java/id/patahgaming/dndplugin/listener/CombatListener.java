@@ -17,6 +17,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Combat visual + audio feedback untuk semua entity (player & mob).
@@ -28,8 +30,10 @@ import java.time.Duration;
 public class CombatListener implements Listener {
 
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
+    private static final long TITLE_COOLDOWN_MS = 600; // min 600ms antar title
 
     private final Plugin plugin;
+    private final Map<UUID, Long> lastTitleTime = new java.util.concurrent.ConcurrentHashMap<>();
 
     public CombatListener(Plugin plugin) {
         this.plugin = plugin;
@@ -50,13 +54,18 @@ public class CombatListener implements Listener {
             // Player hurt sound (lebih keras)
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT, 0.8f, 1.0f);
 
-            // Red flash title ("-3 ❤")
-            Title hurtTitle = Title.title(
-                    LEGACY.deserialize("§c-" + (int) event.getFinalDamage() + " ❤"),
-                    LEGACY.deserialize("§7" + (int) newHp + "/" + (int) maxHp + " HP"),
-                    Title.Times.times(Duration.ZERO, Duration.ofMillis(400), Duration.ofMillis(100))
-            );
-            player.showTitle(hurtTitle);
+            // Red flash title dengan cooldown (biar gak spam)
+            long now = System.currentTimeMillis();
+            Long last = lastTitleTime.get(player.getUniqueId());
+            if (last == null || now - last > TITLE_COOLDOWN_MS) {
+                lastTitleTime.put(player.getUniqueId(), now);
+                Title hurtTitle = Title.title(
+                        LEGACY.deserialize("§c-" + (int) event.getFinalDamage() + " ❤"),
+                        LEGACY.deserialize("§7" + (int) newHp + "/" + (int) maxHp + " HP"),
+                        Title.Times.times(Duration.ZERO, Duration.ofMillis(400), Duration.ofMillis(100))
+                );
+                player.showTitle(hurtTitle);
+            }
 
             // Critical damage sound + efek kalau kena >25% max HP
             if (event.getFinalDamage() > maxHp * 0.25) {
@@ -154,8 +163,9 @@ public class CombatListener implements Listener {
             return prefix + npcName;
         }
 
-        // Regular mob: vanilla name
-        return entity.getName();
+        // Regular mob: vanilla name (bisa null kalau ada custom name)
+        String vanillaName = entity.getName();
+        return vanillaName != null ? vanillaName : entity.getType().name();
     }
 
     /** Force refresh HP bar untuk semua entity dalam battle. */

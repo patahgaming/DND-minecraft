@@ -4,6 +4,7 @@ import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
+import java.util.List;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -77,15 +78,21 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             modifier = plugin.getPlayerDataStore().getAbilityModifier(player, ability);
         }
 
-        // Proficiency bonus: kalau skill ini adalah class skill → +prof
+        // Proficiency bonus: hanya untuk 2 skill yang "dipilih" (2 pertama dari class skill options)
         if (!ability.isEmpty() && !rollType.equals("initiative") && !rollType.equals("attack")
                 && !rollType.equals("death_save")) {
             CharacterClass charClass = CharacterClass.fromName(
                     plugin.getPlayerDataStore().getCharacterClass(player));
             if (charClass != null && charClass.hasSkillOption(rollType)) {
-                int profBonus = id.patahgaming.dndplugin.engine.combat.CombatEngine
-                        .proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
-                modifier += profBonus;
+                // Cek apakah skill ini di 2 pertama (simulasi "chosen skills")
+                List<String> options = charClass.getSkillOptions();
+                int maxChosen = 2; // D&D: most classes pick 2 skills at Lv1
+                int chosenIdx = options.indexOf(rollType.toLowerCase());
+                if (chosenIdx >= 0 && chosenIdx < maxChosen) {
+                    int profBonus = id.patahgaming.dndplugin.engine.combat.CombatEngine
+                            .proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
+                    modifier += profBonus;
+                }
             }
         }
 

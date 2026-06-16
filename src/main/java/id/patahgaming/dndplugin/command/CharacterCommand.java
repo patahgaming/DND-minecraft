@@ -191,23 +191,29 @@ public class CharacterCommand implements CommandExecutor, TabCompleter {
 
     private void handleList(Player player) {
         player.sendMessage("§6§l=== Character Templates ===§r");
-        // List template files dari JAR
-        String[][] templates = {
-                {"aric_fighter", "Aric the Shieldbearer", "Fighter", "Human",
-                        "Ex-captain seeking to rebuild his honor."},
-                {"lyra_rogue", "Lyra Shadowmere", "Rogue", "Elf",
-                        "Street-smart thief hunting the Shadow Diamond."},
-                {"merlin_wizard", "Merlin Emberweave", "Wizard", "Human",
-                        "Scholar seeking lost magical artifacts."},
-                {"mira_cleric", "Mira Dawnbringer", "Cleric", "Dwarf",
-                        "Dwarven priestess of the Sun God Pelor."},
-        };
-        for (String[] t : templates) {
-            player.sendMessage("§e  " + t[0] + " §7— §6" + t[1]
-                    + " §7(Lv1 " + t[2] + " " + t[3] + ")");
-            player.sendMessage("§7    " + t[4]);
+        // Scan JAR resources for data/characters/*.yml
+        boolean found = false;
+        for (String templateId : scanTemplateIds()) {
+            var tmpl = loadTemplate(templateId);
+            if (tmpl != null) {
+                found = true;
+                String backstory = tmpl.getOrDefault("backstory", "");
+                String snippet = backstory.length() > 60 ? backstory.substring(0, 60) + "..." : backstory;
+                player.sendMessage("§e  " + templateId + " §7— §6" + tmpl.get("display_name")
+                        + " §7(Lv1 " + tmpl.get("class") + " " + tmpl.get("race") + ")");
+                player.sendMessage("§7    " + snippet);
+            }
+        }
+        if (!found) {
+            player.sendMessage("§7Tidak ada template tersedia.");
         }
         player.sendMessage("§7Pakai: §e/character pick <template_id>");
+    }
+
+    /** Scan known template IDs from JAR. */
+    private List<String> scanTemplateIds() {
+        // Known templates (bisa di-extend dengan dynamic resource listing nanti)
+        return List.of("aric_fighter", "lyra_rogue", "merlin_wizard", "mira_cleric");
     }
 
     private void handleReset(Player player) {
