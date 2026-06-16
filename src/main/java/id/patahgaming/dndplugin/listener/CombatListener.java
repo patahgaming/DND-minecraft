@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 
@@ -37,6 +38,11 @@ public class CombatListener implements Listener {
 
     public CombatListener(Plugin plugin) {
         this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        lastTitleTime.remove(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

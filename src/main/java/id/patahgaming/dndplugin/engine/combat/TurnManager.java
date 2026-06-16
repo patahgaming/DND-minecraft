@@ -137,6 +137,9 @@ public class TurnManager {
             // Mob turn — auto attack random player
             runMobTurn(entity);
         }
+
+        // Reset recursion guard — normal flow selesai
+        nextTurnDepth = 0;
     }
 
     /** Auto-AI untuk mob: unfreeze → serang → re-freeze → next turn. */

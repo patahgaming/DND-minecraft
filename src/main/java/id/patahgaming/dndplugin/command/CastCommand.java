@@ -109,10 +109,17 @@ public class CastCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            player.sendMessage("§eGunakan: /cast <spell> [target]");
-            player.sendMessage("§7Spells tersedia (pakai TAB):");
-            for (Spell s : getAvailableSpells(player)) {
-                player.sendMessage("§b  " + s.id + " §7— " + s.name + ": " + s.description);
+            var available = getAvailableSpells(player);
+            if (available.isEmpty()) {
+                player.sendMessage("§7Class kamu ("
+                        + plugin.getPlayerDataStore().getCharacterClass(player)
+                        + ") tidak punya spell. Gunakan §e/atk§7!");
+            } else {
+                player.sendMessage("§eGunakan: /cast <spell> [target]");
+                player.sendMessage("§7Spells tersedia (pakai TAB):");
+                for (Spell s : available) {
+                    player.sendMessage("§b  " + s.id + " §7— " + s.name + ": " + s.description);
+                }
             }
             return true;
         }
