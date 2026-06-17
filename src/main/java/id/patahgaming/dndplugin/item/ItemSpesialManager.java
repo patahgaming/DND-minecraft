@@ -95,7 +95,7 @@ public class ItemSpesialManager {
                 "longsword_plus1", "flaming_sword", "soul_reaper",
                 "leather_vest", "chainmail", "plate_of_thornhollow",
                 "health_potion", "greater_health_potion",
-                "ancient_key", "elder_seal"
+                "ancient_key", "elder_seal", "dice_d20"
         };
         for (String id : templates) {
             String path = jarPath + "/" + id + ".yml";

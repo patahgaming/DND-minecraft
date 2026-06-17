@@ -1,0 +1,11 @@
+item_id: dice_d20
+display_name: "Dadu D20"
+rarity: COMMON
+item_type: DICE
+minecraft_material: WHITE_WOOL
+dice_type: D20
+lore:
+  - "§7Letakkan di tanah untuk roll d20"
+  - "§7Dadu akan kembali ke inventory"
+  - "§8[DnD Dice]"
+special_effect: null
