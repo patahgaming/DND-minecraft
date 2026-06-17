@@ -92,6 +92,15 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // --- Distance check ---
+        double dist = player.getLocation().distance(target.getLocation());
+        double maxDist = melee ? 3.5 : 30.0; // melee ~3 blocks, ranged ~30 blocks
+        if (dist > maxDist) {
+            player.sendMessage("§cTerlalu jauh! " + (melee ? "Jarak melee max 3 block." : "Jarak ranged max 30 block.")
+                    + " §7(jarak: " + String.format("%.1f", dist) + ")");
+            return true;
+        }
+
         // Select action
         tm.selectAction(player);
 

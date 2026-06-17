@@ -149,6 +149,17 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        // Re-check jarak (player mungkin udah pindah sejak /atk)
+        double dist = player.getLocation().distance(target.getLocation());
+        double maxDist = melee ? 3.5 : 30.0;
+        if (dist > maxDist) {
+            player.sendMessage("§cTerlalu jauh! Target udah bergerak menjauh. §7(jarak: " + String.format("%.1f", dist) + ")");
+            PendingRoll.clear(player);
+            tm.resolveAction();
+            checkQueue(player);
+            return;
+        }
+
         // Calculate hit
         int strMod = plugin.getPlayerDataStore().getAbilityModifier(player, "str");
         int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");

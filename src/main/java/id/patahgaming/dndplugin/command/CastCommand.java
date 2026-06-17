@@ -110,6 +110,16 @@ public class CastCommand implements CommandExecutor, TabCompleter {
             }
         }
 
+        // --- Distance check ---
+        // Spell range: ~20 blocks (D&D standard 60-120ft)
+        double dist = player.getLocation().distance(target.getLocation());
+        double maxDist = spell.attackType() == SpellDataStore.AttackType.ATTACK_ROLL ? 24.0 : 16.0;
+        if (dist > maxDist) {
+            player.sendMessage("§cTerlalu jauh! Jarak spell max " + (int) maxDist + " block."
+                    + " §7(jarak: " + String.format("%.1f", dist) + ")");
+            return true;
+        }
+
         // Select action
         tm.selectAction(player);
 
