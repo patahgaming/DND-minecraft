@@ -13,6 +13,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -54,12 +55,11 @@ public class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerDamageImmunity(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-
-        // Only cancel mob-sourced attacks
         if (!(event instanceof EntityDamageByEntityEvent entityEvent)) return;
 
-        // Allow non-mob sources (players, projectiles from dispensers, etc.)
-        if (!(entityEvent.getDamager() instanceof Mob)) return;
+        // Resolve the actual attacker (handle projectiles: arrow → skeleton shooter)
+        LivingEntity attacker = resolveAttacker(entityEvent);
+        if (attacker == null) return; // bukan dari mob → allow (fall, lava, player, dispenser)
 
         TurnManager tm = plugin.getTurnManager();
         if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
@@ -69,9 +69,33 @@ public class CombatListener implements Listener {
         }
 
         // Battle active → only allow damage from battle participants
-        if (!tm.getParticipants().containsKey(entityEvent.getDamager().getUniqueId())) {
+        if (!tm.getParticipants().containsKey(attacker.getUniqueId())) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Resolve the actual mob attacker from a damage event.
+     * Handles: direct Mob attack, Projectile shot by Mob.
+     * Returns null if the source is not a mob (player, dispenser, environment, etc.).
+     */
+    private LivingEntity resolveAttacker(EntityDamageByEntityEvent event) {
+        // Direct mob attack
+        if (event.getDamager() instanceof Mob mob) {
+            return mob;
+        }
+
+        // Projectile (arrow, trident, fireball, shulker bullet, etc.)
+        if (event.getDamager() instanceof Projectile proj) {
+            if (proj.getShooter() instanceof Mob mob) {
+                return mob;
+            }
+            // Shooter is Player, Dispenser, or null → allow (not mob-sourced)
+            return null;
+        }
+
+        // Other sources: player melee, falling block, explosion, etc. → allow
+        return null;
     }
 
     @EventHandler
