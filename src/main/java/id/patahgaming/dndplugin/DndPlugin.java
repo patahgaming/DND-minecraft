@@ -23,12 +23,15 @@ import id.patahgaming.dndplugin.engine.combat.DeathSaveManager;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.item.ItemSpesialCommand;
 import id.patahgaming.dndplugin.item.ItemSpesialManager;
+import id.patahgaming.dndplugin.command.PoiCommand;
 import id.patahgaming.dndplugin.item.listener.DiceBlockListener;
 import id.patahgaming.dndplugin.item.listener.WeaponAttackListener;
+import id.patahgaming.dndplugin.ui.PoiParticleDisplay;
 import id.patahgaming.dndplugin.listener.CombatListener;
 import id.patahgaming.dndplugin.listener.NpcInteractListener;
 import id.patahgaming.dndplugin.listener.NpcSpawnListener;
 import id.patahgaming.dndplugin.listener.PlayerJoinListener;
+import id.patahgaming.dndplugin.listener.PoiDefineListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class DndPlugin extends JavaPlugin {
@@ -45,6 +48,7 @@ public final class DndPlugin extends JavaPlugin {
     private TurnManager turnManager;
     private DeathSaveManager deathSaveManager;
     private RollCommand rollCommand;
+    private PoiParticleDisplay poiParticleDisplay;
     private ItemSpesialManager itemSpesialManager;
     private SpellDataStore spellDataStore;
     private SrdRulesStore srdRulesStore;
@@ -75,6 +79,9 @@ public final class DndPlugin extends JavaPlugin {
         // Spell system (YAML-based)
         this.spellDataStore = new SpellDataStore(this);
 
+        // POI particle display
+        this.poiParticleDisplay = new PoiParticleDisplay(this);
+
         // Item system (YAML-based)
         this.itemSpesialManager = new ItemSpesialManager(this);
 
@@ -89,6 +96,7 @@ public final class DndPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new CombatListener(this), this);
         getServer().getPluginManager().registerEvents(new WeaponAttackListener(this), this);
         getServer().getPluginManager().registerEvents(new DiceBlockListener(this), this);
+        getServer().getPluginManager().registerEvents(new PoiDefineListener(this), this);
 
         // Tick loop: cek POI bbox setiap 2 detik (diambil dari config)
         int intervalSeconds = getConfig().getInt("engine.poi-tick-interval-seconds", 2);
@@ -127,6 +135,9 @@ public final class DndPlugin extends JavaPlugin {
         ItemSpesialCommand itemCommand = new ItemSpesialCommand(this);
         getCommand("itemspesial").setExecutor(itemCommand);
         getCommand("itemspesial").setTabCompleter(itemCommand);
+        PoiCommand poiCommand = new PoiCommand(this);
+        getCommand("poi").setExecutor(poiCommand);
+        getCommand("poi").setTabCompleter(poiCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
@@ -224,6 +235,10 @@ public final class DndPlugin extends JavaPlugin {
 
     public RollCommand getRollCommand() {
         return rollCommand;
+    }
+
+    public PoiParticleDisplay getPoiParticleDisplay() {
+        return poiParticleDisplay;
     }
 
     public ItemSpesialManager getItemSpesialManager() {

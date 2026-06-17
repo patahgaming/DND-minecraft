@@ -36,3 +36,6 @@ commands:
   itemspesial:
     description: Item spesial management (create, get, list, info, give)
     usage: /itemspesial <create|get|list|info|give>
+  poi:
+    description: POI management (define, confirm, cancel, list, info, tree)
+    usage: /poi <define|confirm|cancel|list|info|tree>

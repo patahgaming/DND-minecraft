@@ -1,18 +1,17 @@
 package id.patahgaming.dndplugin.data;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Load POI (Point of Interest) dari data/poi/*.yml.
- * Untuk sekarang dibuat manual. AI narator menggunakan list POI ini
- * (bbox + biome + nama) sebagai konteks dunia.
+ * Load/save POI (Point of Interest) dari data/poi/*.yml.
+ *
+ * v2: 3D bbox (y1,y2) + parent_poi_id hierarchy + YAML save + deepest-match lookup.
  */
 public class PoiStore {
 
@@ -20,70 +19,176 @@ public class PoiStore {
         public String poiId;
         public String name;
         public String biome;
+        public String parentPoiId; // null = top-level
         public StoryTreeStore.Bbox bbox;
+
+        /** Depth in the hierarchy tree — computed after load. */
+        public int depth() {
+            int d = 0;
+            String parent = parentPoiId;
+            // Walk up — depth is capped at 50 to avoid infinite loops
+            for (int i = 0; i < 50 && parent != null; i++) {
+                d++;
+                // Cannot resolve without lookup context; depth is computed externally
+                break;
+            }
+            return d;
+        }
     }
 
     private final DndPlugin plugin;
     private final File poiFolder;
-    private final List<Poi> pois = new ArrayList<>();
+    private final Map<String, Poi> poiMap = new LinkedHashMap<>();
 
     public PoiStore(DndPlugin plugin) {
         this.plugin = plugin;
         this.poiFolder = new File(plugin.getDataFolder(), "data/poi");
-        if (!poiFolder.exists()) {
-            poiFolder.mkdirs();
-        }
+        if (!poiFolder.exists()) poiFolder.mkdirs();
         loadAll();
     }
 
+    // ==================== LOAD ====================
+
     private void loadAll() {
+        poiMap.clear();
         File[] files = poiFolder.listFiles((dir, name) -> name.endsWith(".yml") || name.endsWith(".yaml"));
-        if (files == null) return;
-
-        Yaml yaml = new Yaml();
-        for (File file : files) {
-            try (InputStream in = java.nio.file.Files.newInputStream(file.toPath())) {
-                Map<String, Object> data = yaml.load(in);
-                if (data == null) continue;
-
-                Poi poi = new Poi();
-                poi.poiId = String.valueOf(data.get("poi_id"));
-                poi.name = String.valueOf(data.get("name"));
-                poi.biome = String.valueOf(data.get("biome"));
-
-                Object bboxRaw = data.get("bbox");
-                if (bboxRaw instanceof Map<?, ?> bboxMap) {
-                    StoryTreeStore.Bbox bbox = new StoryTreeStore.Bbox();
-                    bbox.x1 = toInt(bboxMap.get("x1"));
-                    bbox.z1 = toInt(bboxMap.get("z1"));
-                    bbox.x2 = toInt(bboxMap.get("x2"));
-                    bbox.z2 = toInt(bboxMap.get("z2"));
-                    poi.bbox = bbox;
+        if (files != null) {
+            Yaml yaml = new Yaml();
+            for (File file : files) {
+                try (InputStream in = java.nio.file.Files.newInputStream(file.toPath())) {
+                    Map<String, Object> data = yaml.load(in);
+                    if (data == null) continue;
+                    Poi poi = parsePoi(data);
+                    if (poi != null) poiMap.put(poi.poiId, poi);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load POI: " + file.getName() + " — " + e.getMessage());
                 }
-
-                pois.add(poi);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load POI from " + file.getName() + ": " + e.getMessage());
             }
         }
+        plugin.getLogger().info("[PoiStore] Loaded " + poiMap.size() + " POIs");
     }
+
+    private Poi parsePoi(Map<String, Object> data) {
+        Poi poi = new Poi();
+        poi.poiId = String.valueOf(data.get("poi_id"));
+        poi.name = String.valueOf(data.get("name"));
+        poi.biome = String.valueOf(data.getOrDefault("biome", "unknown"));
+        poi.parentPoiId = data.containsKey("parent_poi_id")
+                ? String.valueOf(data.get("parent_poi_id"))
+                : null;
+        if ("null".equals(poi.parentPoiId) || "".equals(poi.parentPoiId)) poi.parentPoiId = null;
+
+        Object bboxRaw = data.get("bbox");
+        if (bboxRaw instanceof Map<?, ?> bboxMap) {
+            StoryTreeStore.Bbox bbox = new StoryTreeStore.Bbox();
+            bbox.x1 = toInt(bboxMap.get("x1"));
+            bbox.z1 = toInt(bboxMap.get("z1"));
+            bbox.x2 = toInt(bboxMap.get("x2"));
+            bbox.z2 = toInt(bboxMap.get("z2"));
+            bbox.y1 = bboxMap.containsKey("y1") ? toInt(bboxMap.get("y1")) : 0;
+            bbox.y2 = bboxMap.containsKey("y2") ? toInt(bboxMap.get("y2")) : 256;
+            poi.bbox = bbox;
+        }
+        return poi;
+    }
+
+    // ==================== SAVE ====================
+
+    /** Save POI ke YAML file di disk. */
+    public void save(Poi poi) {
+        YamlConfiguration yaml = new YamlConfiguration();
+        yaml.set("poi_id", poi.poiId);
+        yaml.set("name", poi.name);
+        yaml.set("biome", poi.biome);
+        if (poi.parentPoiId != null) yaml.set("parent_poi_id", poi.parentPoiId);
+
+        yaml.set("bbox.x1", poi.bbox.x1);
+        yaml.set("bbox.y1", poi.bbox.y1);
+        yaml.set("bbox.z1", poi.bbox.z1);
+        yaml.set("bbox.x2", poi.bbox.x2);
+        yaml.set("bbox.y2", poi.bbox.y2);
+        yaml.set("bbox.z2", poi.bbox.z2);
+
+        File file = new File(poiFolder, poi.poiId + ".yml");
+        try {
+            yaml.save(file);
+            poiMap.put(poi.poiId, poi);
+            plugin.getLogger().info("[PoiStore] Saved POI: " + poi.poiId);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to save POI " + poi.poiId + ": " + e.getMessage());
+        }
+    }
+
+    // ==================== QUERY ====================
+
+    public Collection<Poi> getAll() { return poiMap.values(); }
+    public Poi get(String poiId) { return poiMap.get(poiId); }
+    public boolean exists(String poiId) { return poiMap.containsKey(poiId); }
+
+    /** Get children of a specific POI. */
+    public List<Poi> getChildren(String parentPoiId) {
+        List<Poi> children = new ArrayList<>();
+        for (Poi poi : poiMap.values()) {
+            if (parentPoiId.equals(poi.parentPoiId)) children.add(poi);
+        }
+        return children;
+    }
+
+    /** Get all top-level POIs (no parent). */
+    public List<Poi> getTopLevel() {
+        List<Poi> roots = new ArrayList<>();
+        for (Poi poi : poiMap.values()) {
+            if (poi.parentPoiId == null) roots.add(poi);
+        }
+        return roots;
+    }
+
+    /**
+     * Deepest-match lookup: return POI paling spesifik yang mencakup koordinat.
+     * Walk tree → kalau ada child yang juga contains, masuk lebih dalam.
+     */
+    public Poi findContaining(double x, double y, double z) {
+        Poi best = null;
+        int bestDepth = -1;
+        for (Poi poi : poiMap.values()) {
+            if (poi.bbox != null && poi.bbox.contains(x, y, z)) {
+                int depth = computeDepth(poi);
+                if (depth > bestDepth) {
+                    bestDepth = depth;
+                    best = poi;
+                }
+            }
+        }
+        return best;
+    }
+
+    /** Backward compat — 2D lookup. */
+    public Poi findContaining(double x, double z) {
+        return findContaining(x, 64, z); // reasonable default Y
+    }
+
+    /** Compute tree depth for a POI. */
+    private int computeDepth(Poi poi) {
+        int depth = 0;
+        String parent = poi.parentPoiId;
+        Set<String> visited = new HashSet<>();
+        visited.add(poi.poiId);
+        while (parent != null && depth < 50) {
+            if (!visited.add(parent)) break; // circular guard
+            Poi p = poiMap.get(parent);
+            if (p == null) break;
+            depth++;
+            parent = p.parentPoiId;
+        }
+        return depth;
+    }
+
+    // ==================== UTIL ====================
 
     private static int toInt(Object o) {
         if (o instanceof Number n) return n.intValue();
         return Integer.parseInt(String.valueOf(o));
     }
 
-    public List<Poi> getAll() {
-        return pois;
-    }
-
-    /** Cari POI yang mencakup koordinat (x, z) tertentu — untuk konteks AI narator. */
-    public Poi findContaining(double x, double z) {
-        for (Poi poi : pois) {
-            if (poi.bbox != null && poi.bbox.contains(x, z)) {
-                return poi;
-            }
-        }
-        return null;
-    }
+    public void reload() { loadAll(); }
 }

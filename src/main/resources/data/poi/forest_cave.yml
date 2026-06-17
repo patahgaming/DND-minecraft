@@ -1,8 +1,11 @@
 poi_id: forest_cave
 name: "Goa Hutan Gelap"
 biome: forest
+parent_poi_id: null
 bbox:
   x1: 100
+  y1: 0
   z1: 200
   x2: 150
+  y2: 256
   z2: 250
