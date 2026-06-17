@@ -148,6 +148,12 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (!c1.getWorld().equals(c2.getWorld())) {
+            player.sendMessage("§cKedua corner harus di world yang sama!");
+            player.sendMessage("§7Corner 1: " + c1.getWorld().getName() + " §8| §7Corner 2: " + c2.getWorld().getName());
+            return true;
+        }
+
         // Build bbox
         StoryTreeStore.Bbox bbox = new StoryTreeStore.Bbox();
         bbox.x1 = c1.getBlockX(); bbox.y1 = c1.getBlockY(); bbox.z1 = c1.getBlockZ();
@@ -302,18 +308,22 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
         pdc.remove(KEY_CORNER1);
         pdc.remove(KEY_CORNER2);
 
-        // Remove stick tool dari inventory
+        // Remove stick tool dari inventory + offhand
         for (int slot = 0; slot < 36; slot++) {
             ItemStack item = player.getInventory().getItem(slot);
-            if (item != null && item.getType() == org.bukkit.Material.STICK && item.hasItemMeta()) {
-                var pdc2 = item.getItemMeta().getPersistentDataContainer();
-                if (pdc2.has(new NamespacedKey("dndplugin", "poi_tool"), PersistentDataType.BOOLEAN)) {
-                    player.getInventory().setItem(slot, null);
-                }
-            }
+            if (isPoiTool(item)) player.getInventory().setItem(slot, null);
         }
+        // Offhand
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (isPoiTool(offhand)) player.getInventory().setItemInOffHand(null);
 
         plugin.getPoiParticleDisplay().stopDisplay(player);
+    }
+
+    private boolean isPoiTool(ItemStack item) {
+        if (item == null || item.getType() != org.bukkit.Material.STICK || !item.hasItemMeta()) return false;
+        return item.getItemMeta().getPersistentDataContainer()
+                .has(new NamespacedKey("dndplugin", "poi_tool"), PersistentDataType.BOOLEAN);
     }
 
     // ==================== TAB COMPLETE ====================
@@ -327,9 +337,9 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
             String input = args[0].toLowerCase();
             return SUBCOMMANDS.stream().filter(s -> s.startsWith(input)).toList();
         }
-        if (args.length == 4 && "define".equalsIgnoreCase(args[0])) {
-            // Suggest existing POI IDs for parent
-            String input = args[3].toLowerCase();
+        if (args.length == 5 && "define".equalsIgnoreCase(args[0])) {
+            // Suggest existing POI IDs for parent (arg index 4 = parent_poi_id)
+            String input = args[4].toLowerCase();
             return plugin.getPoiStore().getAll().stream()
                     .map(p -> p.poiId)
                     .filter(id -> id.startsWith(input))

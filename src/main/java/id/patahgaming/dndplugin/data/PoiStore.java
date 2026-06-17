@@ -22,18 +22,7 @@ public class PoiStore {
         public String parentPoiId; // null = top-level
         public StoryTreeStore.Bbox bbox;
 
-        /** Depth in the hierarchy tree — computed after load. */
-        public int depth() {
-            int d = 0;
-            String parent = parentPoiId;
-            // Walk up — depth is capped at 50 to avoid infinite loops
-            for (int i = 0; i < 50 && parent != null; i++) {
-                d++;
-                // Cannot resolve without lookup context; depth is computed externally
-                break;
-            }
-            return d;
-        }
+        /** Depth in hierarchy — 0 for top-level, 1+ for children. Computed externally via PoiStore. */
     }
 
     private final DndPlugin plugin;
@@ -69,14 +58,16 @@ public class PoiStore {
     }
 
     private Poi parsePoi(Map<String, Object> data) {
+        Object idRaw = data.get("poi_id");
+        if (idRaw == null) return null; // skip invalid POI
         Poi poi = new Poi();
-        poi.poiId = String.valueOf(data.get("poi_id"));
-        poi.name = String.valueOf(data.get("name"));
+        poi.poiId = String.valueOf(idRaw);
+        poi.name = String.valueOf(data.getOrDefault("name", poi.poiId));
         poi.biome = String.valueOf(data.getOrDefault("biome", "unknown"));
-        poi.parentPoiId = data.containsKey("parent_poi_id")
-                ? String.valueOf(data.get("parent_poi_id"))
-                : null;
-        if ("null".equals(poi.parentPoiId) || "".equals(poi.parentPoiId)) poi.parentPoiId = null;
+        Object parentRaw = data.get("parent_poi_id");
+        poi.parentPoiId = (parentRaw != null && !"null".equals(String.valueOf(parentRaw))
+                && !"".equals(String.valueOf(parentRaw)))
+                ? String.valueOf(parentRaw) : null;
 
         Object bboxRaw = data.get("bbox");
         if (bboxRaw instanceof Map<?, ?> bboxMap) {
@@ -129,7 +120,7 @@ public class PoiStore {
     public List<Poi> getChildren(String parentPoiId) {
         List<Poi> children = new ArrayList<>();
         for (Poi poi : poiMap.values()) {
-            if (parentPoiId.equals(poi.parentPoiId)) children.add(poi);
+            if (java.util.Objects.equals(parentPoiId, poi.parentPoiId)) children.add(poi);
         }
         return children;
     }
@@ -186,8 +177,10 @@ public class PoiStore {
     // ==================== UTIL ====================
 
     private static int toInt(Object o) {
+        if (o == null) return 0;
         if (o instanceof Number n) return n.intValue();
-        return Integer.parseInt(String.valueOf(o));
+        try { return Integer.parseInt(String.valueOf(o)); }
+        catch (NumberFormatException e) { return 0; }
     }
 
     public void reload() { loadAll(); }

@@ -68,7 +68,7 @@ public class PoiParticleDisplay {
     /** Draw 12 edges of a 3D wireframe box. */
     private void drawWireframe(Location c1, Location c2) {
         World world = c1.getWorld();
-        if (world == null || !c2.getWorld().equals(world)) return;
+        if (world == null || c2.getWorld() == null || !c2.getWorld().equals(world)) return;
 
         double x1 = Math.min(c1.getX(), c2.getX());
         double y1 = Math.min(c1.getY(), c2.getY());

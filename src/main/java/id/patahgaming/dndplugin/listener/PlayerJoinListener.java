@@ -66,6 +66,7 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         plugin.getPlayerDataStore().save(event.getPlayer());
+        plugin.getPoiParticleDisplay().stopDisplay(event.getPlayer());
     }
 
     /**
