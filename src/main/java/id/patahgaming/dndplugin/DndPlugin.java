@@ -15,6 +15,7 @@ import id.patahgaming.dndplugin.command.TalkCommand;
 import id.patahgaming.dndplugin.data.NpcDataStore;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import id.patahgaming.dndplugin.data.PoiStore;
+import id.patahgaming.dndplugin.data.SpellDataStore;
 import id.patahgaming.dndplugin.data.SrdRulesStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
@@ -37,6 +38,7 @@ public final class DndPlugin extends JavaPlugin {
     private NarratorService narratorService;
     private NpcDialogueService npcDialogueService;
     private TurnManager turnManager;
+    private SpellDataStore spellDataStore;
     private SrdRulesStore srdRulesStore;
     private PoiTickTask poiTickTask;
 
@@ -57,6 +59,9 @@ public final class DndPlugin extends JavaPlugin {
         this.narratorService = new NarratorService(this);
         this.npcDialogueService = new NpcDialogueService(this);
         this.turnManager = new TurnManager(this);
+
+        // Spell system (YAML-based)
+        this.spellDataStore = new SpellDataStore(this);
 
         // SRD rules (load async biar startup cepet)
         this.srdRulesStore = new SrdRulesStore(this);
@@ -131,7 +136,19 @@ public final class DndPlugin extends JavaPlugin {
         String[] defaultDataFiles = {
                 "data/story/forest_entrance.yml",
                 "data/npcs/elder_marek.yml",
-                "data/poi/forest_cave.yml"
+                "data/poi/forest_cave.yml",
+                "data/spells/fire_bolt.yml",
+                "data/spells/magic_missile.yml",
+                "data/spells/burning_hands.yml",
+                "data/spells/chill_touch.yml",
+                "data/spells/shocking_grasp.yml",
+                "data/spells/ray_of_frost.yml",
+                "data/spells/sacred_flame.yml",
+                "data/spells/poison_spray.yml",
+                "data/spells/acid_splash.yml",
+                "data/spells/frostbite.yml",
+                "data/spells/eldritch_blast.yml",
+                "data/spells/word_of_radiance.yml"
         };
         for (String path : defaultDataFiles) {
             java.io.File target = new java.io.File(getDataFolder(), path);
@@ -181,6 +198,10 @@ public final class DndPlugin extends JavaPlugin {
         return turnManager;
     }
 
+    public SpellDataStore getSpellDataStore() {
+        return spellDataStore;
+    }
+
     public SrdRulesStore getSrdRulesStore() {
         return srdRulesStore;
     }
@@ -202,6 +223,9 @@ public final class DndPlugin extends JavaPlugin {
         this.npcDataStore = new NpcDataStore(this);
         this.storyTreeStore = new StoryTreeStore(this);
         this.poiStore = new PoiStore(this);
+        if (this.spellDataStore != null) {
+            this.spellDataStore.reload();
+        }
         if (this.srdRulesStore != null) {
             this.srdRulesStore.reload();
         }

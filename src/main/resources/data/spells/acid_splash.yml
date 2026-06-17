@@ -1,0 +1,10 @@
+spell_id: acid_splash
+display_name: "Acid Splash"
+attack_type: SAVING_THROW
+saving_stat: DEX
+damage_dice: "1d6"
+damage_type: ACID
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

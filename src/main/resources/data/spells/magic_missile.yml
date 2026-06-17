@@ -1,0 +1,11 @@
+spell_id: magic_missile
+display_name: "Magic Missile"
+attack_type: AUTO_HIT
+saving_stat: null
+damage_dice: "3d4"
+damage_bonus: 3
+damage_type: FORCE
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

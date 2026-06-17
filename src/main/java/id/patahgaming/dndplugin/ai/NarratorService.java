@@ -234,6 +234,24 @@ public class NarratorService {
         String spell = ctx.mechanicResult.getOrDefault("spell", "?");
         String dmg = ctx.mechanicResult.getOrDefault("damage", "0");
         String type = ctx.mechanicResult.getOrDefault("damageType", "force");
+        String phase = ctx.phase != null ? ctx.phase : "RESOLVE";
+
+        if ("CAST".equals(phase)) {
+            return String.format(
+                    "%s begins casting %s. Narrate the spellcasting buildup in 1 sentence with magical flavor text. Do NOT describe the outcome yet.%s",
+                    ctx.subject, spell,
+                    setFallback(ctx, String.format("%s begins casting %s...", ctx.subject, spell)));
+        }
+
+        // RESOLVE phase
+        String targets = ctx.mechanicResult.getOrDefault("targetResults", "");
+        if (!targets.isEmpty()) {
+            return String.format(
+                    "%s cast %s. Results: %s. Damage type: %s. Narrate the spell outcome in 2-3 sentences, dramatic, past tense. Mention each target's fate.%s",
+                    ctx.subject, spell, targets, type,
+                    setFallback(ctx, String.format("%s casts %s! %s", ctx.subject, spell, targets)));
+        }
+
         return String.format(
                 "%s casts %s on %s. Damage: %s (%s). Narrate the spellcasting in 2 sentences with magical flavor text.%s",
                 ctx.subject, spell, ctx.target, dmg, type,

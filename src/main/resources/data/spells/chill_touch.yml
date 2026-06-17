@@ -1,0 +1,10 @@
+spell_id: chill_touch
+display_name: "Chill Touch"
+attack_type: ATTACK_ROLL
+saving_stat: null
+damage_dice: "1d8"
+damage_type: NECROTIC
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

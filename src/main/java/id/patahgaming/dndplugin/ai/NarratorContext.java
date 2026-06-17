@@ -50,6 +50,7 @@ public class NarratorContext {
     public Map<String, String> mechanicResult = new LinkedHashMap<>(); // key=value pairs, immutable by AI
     public Map<String, String> extraData = new LinkedHashMap<>();
     public Recipient recipient = Recipient.PARTY;
+    public String phase; // "CAST" or "RESOLVE" for multi-phase events (spells)
     public String fallbackTemplate; // hardcoded template kalau DeepSeek timeout
 
     public NarratorContext(TriggerType type, String subject) {
@@ -81,6 +82,11 @@ public class NarratorContext {
 
     public NarratorContext withFallback(String template) {
         this.fallbackTemplate = template;
+        return this;
+    }
+
+    public NarratorContext withPhase(String phase) {
+        this.phase = phase;
         return this;
     }
 

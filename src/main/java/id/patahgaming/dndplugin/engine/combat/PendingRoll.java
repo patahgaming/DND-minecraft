@@ -1,19 +1,23 @@
 package id.patahgaming.dndplugin.engine.combat;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.UUID;
+import java.lang.reflect.Type;
+import java.util.*;
 
 /**
- * PendingRoll — satu player, satu pending.
- * Disimpan di PDC biar survive server hiccup.
+ * PendingRoll v2 — one active + queue per player.
  *
- * RollType enum cocok untuk auto-detect di /roll:
- *   /roll           → auto pakai pending.rollType
- *   /roll <type>    → cek apakah match, kalau gak → tolak
+ * Disimpan di PDC sebagai JSON biar support queue + context map.
+ * Flow:
+ *   set(active) → player /roll → resolve → advanceQueue() → next
+ *
+ * Queue hanya dipakai saat mob cast spell ke player (rare edge case).
+ * Saat giliran player sendiri, gak ada yang masuk queue.
  */
 public class PendingRoll {
 
@@ -24,70 +28,197 @@ public class PendingRoll {
         DEATH_SAVE("death_save");
 
         private final String key;
-
         RollType(String key) { this.key = key; }
-
         public boolean matches(String input) {
             return key.equalsIgnoreCase(input) || name().equalsIgnoreCase(input);
         }
+        public String getKey() { return key; }
     }
 
-    private static final NamespacedKey KEY_TYPE = new NamespacedKey("dndplugin", "pending_type");
-    private static final NamespacedKey KEY_TARGET = new NamespacedKey("dndplugin", "pending_target");
-    private static final NamespacedKey KEY_EXTRA = new NamespacedKey("dndplugin", "pending_extra");
-    private static final NamespacedKey KEY_SAVE_ABILITY = new NamespacedKey("dndplugin", "pending_save_ability");
-    private static final NamespacedKey KEY_SAVE_DC = new NamespacedKey("dndplugin", "pending_save_dc");
-    private static final NamespacedKey KEY_PROMPT = new NamespacedKey("dndplugin", "pending_prompt");
+    // PDC keys
+    private static final NamespacedKey KEY_ACTIVE = new NamespacedKey("dndplugin", "pending_active");
+    private static final NamespacedKey KEY_QUEUE = new NamespacedKey("dndplugin", "pending_queue");
 
+    private static final Gson GSON = new Gson();
+    private static final Type QUEUE_TYPE = new TypeToken<List<PendingRollData>>(){}.getType();
+
+    // --- JSON-serializable data object ---
+    public static class PendingRollData {
+        public String rollType;
+        public String diceExpr;          // "d20+5", "1d8+3", "2d8+3"
+        public String promptMsg;         // prompt ke player
+        public int lastRollResult;
+        public boolean resolved;
+        public Map<String, String> context = new LinkedHashMap<>(); // spell context, target info, dll
+    }
+
+    // --- Public fields (populated by get()) ---
     public RollType rollType;
-    public String diceExpr;          // "d20+5", "1d8+3", "2d8+3" — engine dice expression
-    public String targetId;          // UUID prefix target
-    public String extraData;         // weapon/spell name, dll
-    public String saveAbility;       // buat saving throw
-    public int saveDC;
+    public String diceExpr;
     public String promptMsg;
-    public int lastRollResult;       // hasil roll terakhir (diisi setelah player roll)
-    public boolean resolved;         // sudah di-roll oleh player?
+    public int lastRollResult;
+    public boolean resolved;
+    public Map<String, String> context = new LinkedHashMap<>();
 
-    /** Set pending roll di PDC player. Overwrite existing. */
+    /** Convert domain object → serializable data. */
+    private PendingRollData toData() {
+        PendingRollData d = new PendingRollData();
+        d.rollType = rollType != null ? rollType.name() : null;
+        d.diceExpr = diceExpr;
+        d.promptMsg = promptMsg;
+        d.lastRollResult = lastRollResult;
+        d.resolved = resolved;
+        d.context = context;
+        return d;
+    }
+
+    /** Convert serializable data → domain object. */
+    private static PendingRoll fromData(PendingRollData d) {
+        if (d == null || d.rollType == null) return null;
+        PendingRoll pr = new PendingRoll();
+        try {
+            pr.rollType = RollType.valueOf(d.rollType);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        pr.diceExpr = d.diceExpr;
+        pr.promptMsg = d.promptMsg;
+        pr.lastRollResult = d.lastRollResult;
+        pr.resolved = d.resolved;
+        pr.context = d.context != null ? d.context : new LinkedHashMap<>();
+        return pr;
+    }
+
+    // ==================== ACTIVE SLOT ====================
+
+    /** Set active PendingRoll. Overwrite existing active. */
     public static void set(Player player, PendingRoll pr) {
         var pdc = player.getPersistentDataContainer();
-        pdc.set(KEY_TYPE, PersistentDataType.STRING, pr.rollType.name());
-        if (pr.targetId != null) pdc.set(KEY_TARGET, PersistentDataType.STRING, pr.targetId);
-        if (pr.extraData != null) pdc.set(KEY_EXTRA, PersistentDataType.STRING, pr.extraData);
-        if (pr.saveAbility != null) pdc.set(KEY_SAVE_ABILITY, PersistentDataType.STRING, pr.saveAbility);
-        pdc.set(KEY_SAVE_DC, PersistentDataType.INTEGER, pr.saveDC);
-        if (pr.promptMsg != null) pdc.set(KEY_PROMPT, PersistentDataType.STRING, pr.promptMsg);
+        PendingRollData data = pr.toData();
+        pdc.set(KEY_ACTIVE, PersistentDataType.STRING, GSON.toJson(data));
     }
 
-    /** Baca pending roll dari PDC player. */
+    /** Get active PendingRoll, or null. */
     public static PendingRoll get(Player player) {
         var pdc = player.getPersistentDataContainer();
-        String typeStr = pdc.get(KEY_TYPE, PersistentDataType.STRING);
-        if (typeStr == null) return null;
+        String json = pdc.get(KEY_ACTIVE, PersistentDataType.STRING);
+        if (json == null) return null;
         try {
-            PendingRoll pr = new PendingRoll();
-            pr.rollType = RollType.valueOf(typeStr);
-            pr.targetId = pdc.get(KEY_TARGET, PersistentDataType.STRING);
-            pr.extraData = pdc.get(KEY_EXTRA, PersistentDataType.STRING);
-            pr.saveAbility = pdc.get(KEY_SAVE_ABILITY, PersistentDataType.STRING);
-            Integer dc = pdc.get(KEY_SAVE_DC, PersistentDataType.INTEGER);
-            pr.saveDC = dc != null ? dc : 0;
-            pr.promptMsg = pdc.get(KEY_PROMPT, PersistentDataType.STRING);
-            return pr;
-        } catch (IllegalArgumentException e) {
+            PendingRollData data = GSON.fromJson(json, PendingRollData.class);
+            return fromData(data);
+        } catch (Exception e) {
             return null;
         }
     }
 
-    /** Hapus pending roll player. */
-    public static void clear(Player player) {
-        var pdc = player.getPersistentDataContainer();
-        pdc.remove(KEY_TYPE); pdc.remove(KEY_TARGET); pdc.remove(KEY_EXTRA);
-        pdc.remove(KEY_SAVE_ABILITY); pdc.remove(KEY_SAVE_DC); pdc.remove(KEY_PROMPT);
+    /** Check if player has active pending roll. */
+    public static boolean has(Player player) {
+        return player.getPersistentDataContainer().has(KEY_ACTIVE, PersistentDataType.STRING);
     }
 
-    public static boolean has(Player player) {
-        return player.getPersistentDataContainer().has(KEY_TYPE, PersistentDataType.STRING);
+    /** Clear active pending roll. */
+    public static void clear(Player player) {
+        player.getPersistentDataContainer().remove(KEY_ACTIVE);
+    }
+
+    // ==================== QUEUE ====================
+
+    /** Enqueue a PendingRoll. If no active, set as active instead. */
+    public static void enqueue(Player player, PendingRoll pr) {
+        if (!has(player)) {
+            set(player, pr);
+            return;
+        }
+        // Add to queue
+        var pdc = player.getPersistentDataContainer();
+        String json = pdc.get(KEY_QUEUE, PersistentDataType.STRING);
+        List<PendingRollData> queue;
+        if (json != null) {
+            try {
+                queue = GSON.fromJson(json, QUEUE_TYPE);
+            } catch (Exception e) {
+                queue = new ArrayList<>();
+            }
+        } else {
+            queue = new ArrayList<>();
+        }
+        queue.add(pr.toData());
+        pdc.set(KEY_QUEUE, PersistentDataType.STRING, GSON.toJson(queue));
+    }
+
+    /** Dequeue next PendingRoll and set as active. Returns null if queue empty. */
+    public static PendingRoll advanceQueue(Player player) {
+        clear(player); // clear current active first
+
+        var pdc = player.getPersistentDataContainer();
+        String json = pdc.get(KEY_QUEUE, PersistentDataType.STRING);
+        if (json == null) return null;
+
+        try {
+            List<PendingRollData> queue = GSON.fromJson(json, QUEUE_TYPE);
+            if (queue == null || queue.isEmpty()) {
+                pdc.remove(KEY_QUEUE);
+                return null;
+            }
+            PendingRollData next = queue.remove(0);
+            if (queue.isEmpty()) {
+                pdc.remove(KEY_QUEUE);
+            } else {
+                pdc.set(KEY_QUEUE, PersistentDataType.STRING, GSON.toJson(queue));
+            }
+
+            PendingRoll pr = fromData(next);
+            if (pr != null) {
+                set(player, pr);
+                return pr;
+            }
+            return null;
+        } catch (Exception e) {
+            pdc.remove(KEY_QUEUE);
+            return null;
+        }
+    }
+
+    /** Get queue size (not including active). */
+    public static int getQueueSize(Player player) {
+        var pdc = player.getPersistentDataContainer();
+        String json = pdc.get(KEY_QUEUE, PersistentDataType.STRING);
+        if (json == null) return 0;
+        try {
+            List<PendingRollData> queue = GSON.fromJson(json, QUEUE_TYPE);
+            return queue != null ? queue.size() : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // ==================== CONTEXT HELPERS ====================
+
+    /** Build context key for target save result. */
+    public static String targetCtxKey(int index) {
+        return "target_" + index;
+    }
+
+    /** Parse target context: {id, saved} from context map entry. */
+    public static TargetSaveInfo parseTargetCtx(Map<String, String> ctx, int index) {
+        String key = targetCtxKey(index);
+        String json = ctx.get(key);
+        if (json == null) return null;
+        try {
+            return GSON.fromJson(json, TargetSaveInfo.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static class TargetSaveInfo {
+        public String id;       // UUID prefix (8 chars)
+        public String name;     // display name
+        public boolean saved;   // true = berhasil save
+    }
+
+    /** Serialize target info to context entry. */
+    public static void putTargetCtx(Map<String, String> ctx, int index, TargetSaveInfo info) {
+        ctx.put(targetCtxKey(index), GSON.toJson(info));
     }
 }

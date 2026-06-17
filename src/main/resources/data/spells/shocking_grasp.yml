@@ -1,0 +1,10 @@
+spell_id: shocking_grasp
+display_name: "Shocking Grasp"
+attack_type: ATTACK_ROLL
+saving_stat: null
+damage_dice: "1d8"
+damage_type: LIGHTNING
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

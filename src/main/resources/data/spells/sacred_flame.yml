@@ -1,0 +1,10 @@
+spell_id: sacred_flame
+display_name: "Sacred Flame"
+attack_type: SAVING_THROW
+saving_stat: DEX
+damage_dice: "1d8"
+damage_type: RADIANT
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [CLERIC, PALADIN, DRUID]

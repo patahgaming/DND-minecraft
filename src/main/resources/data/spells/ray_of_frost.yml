@@ -1,0 +1,10 @@
+spell_id: ray_of_frost
+display_name: "Ray of Frost"
+attack_type: ATTACK_ROLL
+saving_stat: null
+damage_dice: "1d8"
+damage_type: COLD
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

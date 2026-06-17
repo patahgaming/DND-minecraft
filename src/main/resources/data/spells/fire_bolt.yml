@@ -1,0 +1,10 @@
+spell_id: fire_bolt
+display_name: "Fire Bolt"
+attack_type: ATTACK_ROLL
+saving_stat: null
+damage_dice: "1d10"
+damage_type: FIRE
+on_save: NEGATES
+area: SINGLE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]

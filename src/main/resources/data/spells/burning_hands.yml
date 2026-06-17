@@ -1,0 +1,10 @@
+spell_id: burning_hands
+display_name: "Burning Hands"
+attack_type: SAVING_THROW
+saving_stat: DEX
+damage_dice: "3d6"
+damage_type: FIRE
+on_save: HALF
+area: CONE
+spell_slot_cost: 1
+allowed_classes: [WIZARD, WARLOCK]
