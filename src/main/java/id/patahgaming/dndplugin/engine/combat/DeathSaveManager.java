@@ -96,7 +96,7 @@ public class DeathSaveManager {
                 + " §8| §7Failures: §c" + state.failures);
 
         if (roll == 20) {
-            stabilize(player, state);
+            stabilize(player, state, 0.75); // Nat 20 = 75% HP
             return DeathSaveResult.STABILIZED;
         }
 
@@ -110,7 +110,7 @@ public class DeathSaveManager {
         }
 
         if (state.isStabilized()) {
-            stabilize(player, state);
+            stabilize(player, state, 0.50); // Normal = 50% HP
             return DeathSaveResult.STABILIZED;
         }
 
@@ -130,7 +130,7 @@ public class DeathSaveManager {
     public void stabilizeExternal(Player player) {
         DeathSaveState state = states.get(player.getUniqueId());
         if (state == null) return;
-        stabilize(player, state);
+        stabilize(player, state, 0.50); // Battle end = 50% HP
     }
 
     public void clearState(Player player) {
@@ -143,7 +143,7 @@ public class DeathSaveManager {
 
     // ==================== PRIVATE ====================
 
-    private void stabilize(Player player, DeathSaveState state) {
+    private void stabilize(Player player, DeathSaveState state, double healPercent) {
         state.unconscious = false;
         states.remove(player.getUniqueId());
 
@@ -151,12 +151,16 @@ public class DeathSaveManager {
         player.removePotionEffect(PotionEffectType.SLOWNESS);
         player.removePotionEffect(PotionEffectType.WEAKNESS);
 
-        player.setHealth(1.0);
+        // Heal based on roll quality: nat20 = 75%, normal 3-success = 50%
+        double maxHp = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+        int healAmount = (int) Math.max(1, maxHp * healPercent);
+        player.setHealth(healAmount);
 
-        player.sendTitle("§a§lSTABILIZED!", "§7HP kembali ke 1", 10, 60, 20);
-        Bukkit.broadcastMessage("§a" + player.getName() + " berhasil stabil! HP = 1");
+        int pct = (int)(healPercent * 100);
+        player.sendTitle("§a§lSTABILIZED!", "§7HP kembali " + healAmount + " (" + pct + "%)", 10, 60, 20);
+        Bukkit.broadcastMessage("§a" + player.getName() + " berhasil stabil! HP = " + healAmount + " (" + pct + "%)");
 
-        plugin.getLogger().info("[DeathSave] " + player.getName() + " stabilized.");
+        plugin.getLogger().info("[DeathSave] " + player.getName() + " stabilized at " + healAmount + " HP (" + pct + "%).");
     }
 
     private void kill(Player player, DeathSaveState state) {
