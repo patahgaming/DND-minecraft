@@ -92,45 +92,33 @@ public class DiceValidator {
     }
 
     /**
-     * Arrange + ENSURE semua 6 dadu selalu ada di hotbar paling kanan (slot 3-8).
-     * Kalau ada dadu yang hilang → auto-create.
-     * Dipanggil saat player join atau setiap kali validasi.
+     * LOCK dadu ke slot spesifik hotbar (selalu, permanen):
+     *   slot 8 = D20, slot 7 = D12, slot 6 = D10,
+     *   slot 5 = D8,  slot 4 = D6,  slot 3 = D4
+     *
+     * Tiap slot dapat 4 pasang dadu (4× stack) buat roll cepat.
+     * Kalau ada yang hilang → auto-create.
+     * Dipanggil saat player join.
      */
     public static void arrangeDiceToHotbar(Player player) {
         PlayerInventory inv = player.getInventory();
         DiceType[] allDice = DiceType.values(); // D4, D6, D8, D10, D12, D20
 
-        // Kumpulin dadu dari seluruh inventory + hotbar
-        ItemStack[] found = new ItemStack[allDice.length];
-        boolean[] hasDice = new boolean[allDice.length];
+        // Bersihin semua dadu dari inventory (supaya gak duplicate di tempat lain)
         for (int slot = 0; slot < 36; slot++) {
             ItemStack item = inv.getItem(slot);
-            if (item == null) continue;
-            DiceType dt = DiceItemFactory.getDiceType(item);
-            if (dt != null) {
-                int idx = dt.ordinal();
-                if (!hasDice[idx]) {
-                    found[idx] = item.clone();
-                    hasDice[idx] = true;
-                    inv.setItem(slot, null); // remove dari posisi lama
-                }
+            if (DiceItemFactory.isDice(item)) {
+                inv.setItem(slot, null);
             }
         }
 
-        // Kalau ada dadu yang gak ketemu → create baru
-        for (int i = 0; i < allDice.length; i++) {
-            if (!hasDice[i]) {
-                found[i] = DiceItemFactory.create(allDice[i]);
-            }
-        }
-
-        // Taruh di slot paling kanan hotbar: slot 3-8
-        int hotbarSlot = 8; // mulai dari paling kanan
-        for (int i = found.length - 1; i >= 0; i--) {
-            if (found[i] != null && hotbarSlot >= 3) {
-                inv.setItem(hotbarSlot, found[i]);
-                hotbarSlot--;
-            }
+        // Taruh 4 pasang tiap dadu di slot yang sudah ditentukan
+        // D20 = slot 8 (index paling kanan), D4 = slot 3
+        for (int i = allDice.length - 1; i >= 0; i--) {
+            int slot = 8 - (allDice.length - 1 - i); // D20→8, D12→7, D10→6, D8→5, D6→4, D4→3
+            ItemStack dice = DiceItemFactory.create(allDice[i]);
+            dice.setAmount(4); // 4 pasang buat roll cepat
+            inv.setItem(slot, dice);
         }
     }
 

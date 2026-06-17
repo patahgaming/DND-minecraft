@@ -41,12 +41,13 @@ public class DiceItemFactory {
         return dice;
     }
 
-    /** Build 6-dice starter pack (D4, D6, D8, D10, D12, D20). */
+    /** Build 6-dice starter pack — 4 pasang tiap dadu (24 items total). */
     public static ItemStack[] createStarterPack() {
         DiceType[] all = DiceType.values();
         ItemStack[] pack = new ItemStack[all.length];
         for (int i = 0; i < all.length; i++) {
             pack[i] = create(all[i]);
+            pack[i].setAmount(4); // 4 pasang per tipe dadu
         }
         return pack;
     }

@@ -124,74 +124,101 @@ public class DiceBlockListener implements Listener {
         ItemStack headItem = new ItemStack(displayMat);
         stand.getEquipment().setHelmet(headItem);
 
-        // Animation: 5 iterations, 200ms each (1 second total)
-        int iterations = 5;
+        // Dice info
+        DiceType placedDice = DiceItemFactory.getDiceType(diceItem);
+        String diceColor = placedDice != null ? placedDice.getColor() : "§f";
+        String diceLabel = placedDice != null ? placedDice.getLabel() : "?";
+
+        // Animation: 8 iterations, 150ms each (1.2 seconds total) — lebih lebai
+        int iterations = 8;
         for (int i = 0; i < iterations; i++) {
             final int iter = i;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // Random rotation
-                double yaw = random.nextDouble() * 360;
+                // Random rotation — spin makin cepat
+                double yaw = random.nextDouble() * 360 * (iter + 1);
                 double pitch = random.nextDouble() * 360;
+                double roll = random.nextDouble() * 360;
                 stand.setHeadPose(new EulerAngle(
                         Math.toRadians(pitch),
                         Math.toRadians(yaw),
-                        0
+                        Math.toRadians(roll)
                 ));
 
-                // Particles
+                // Bounce effect — stand naik turun
+                double bounceY = Math.sin(iter * Math.PI / 4) * 0.4;
+                stand.teleport(stand.getLocation().add(0, bounceY, 0));
+
+                // Particles — makin banyak tiap iterasi
                 world.spawnParticle(Particle.CRIT,
+                        stand.getLocation().add(0, 0.3, 0),
+                        5 + iter * 3, 0.4, 0.4, 0.4, 0.05);
+                world.spawnParticle(Particle.ENCHANTED_HIT,
                         stand.getLocation().add(0, 0.5, 0),
-                        8, 0.3, 0.3, 0.3, 0.05);
+                        3 + iter, 0.2, 0.2, 0.2, 0.1);
 
-                // Sound
-                float pitchSound = 0.5f + (iter * 0.3f);
-                world.playSound(stand.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.4f, pitchSound);
+                // Sound — ascending pitch + bass drum
+                float pitchSound = 0.5f + (iter * 0.15f);
+                world.playSound(stand.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.5f, pitchSound);
+                if (iter % 2 == 0) {
+                    world.playSound(stand.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 0.3f, 0.8f);
+                }
 
-            }, 4L * i); // 4 ticks = 200ms
+                // Broadcast progress ke semua player
+                StringBuilder sb = new StringBuilder("§7[");
+                for (int j = 0; j < iterations; j++) {
+                    sb.append(j <= iter ? diceColor + "§l▌" : "§8▌");
+                }
+                sb.append("§7]");
+                final String progressMsg = "§7🎲 " + diceColor + player.getName() + " §7rolls " + diceLabel + "... " + sb;
+                Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(progressMsg));
+
+            }, 3L * i); // 3 ticks = 150ms
         }
 
-        // Final resolve after 1 second
+        // Final resolve after ~1.2 detik
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Final sound
-            world.playSound(stand.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.6f, 1.5f);
+            // Grand finale effects
+            world.playSound(stand.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.5f);
+            world.playSound(stand.getLocation(), Sound.BLOCK_BELL_RESONATE, 0.5f, 1.0f);
             world.spawnParticle(Particle.TOTEM_OF_UNDYING,
                     stand.getLocation().add(0, 0.5, 0),
-                    15, 0.5, 0.5, 0.5, 0.1);
+                    20, 0.6, 0.6, 0.6, 0.15);
+            world.spawnParticle(Particle.ENTITY_EFFECT,
+                    stand.getLocation().add(0, 0.3, 0),
+                    10, 0.3, 0.3, 0.3, 0.08);
 
             // Remove armor stand
             stand.remove();
 
-            // Trigger roll untuk player — sama seperti /roll command
+            // Resolve roll
             PendingRoll pending = PendingRoll.get(player);
-            DiceType placedDice = DiceItemFactory.getDiceType(diceItem);
             if (pending != null) {
-                // Check dice type match
                 DiceType required = DiceType.fromDiceExpr(pending.diceExpr);
                 if (placedDice != required && required != null) {
-                    player.sendMessage("§c⚠ Salah dadu! Butuh " + required.getColor() + required.getLabel()
-                            + " (" + required.getColorName() + " Wool)§c, kamu letakkan "
-                            + (placedDice != null ? placedDice.getColor() + placedDice.getLabel() : "?") + ".");
-                    // Tetap kembalikan dadu
+                    Bukkit.broadcastMessage("§c⚠ " + player.getName() + " salah dadu! Butuh "
+                            + required.getColor() + required.getLabel() + "§c.");
                     returnDice(player, diceItem);
                     return;
                 }
-                // Resolve PendingRoll via RollCommand (full flow)
-                player.sendMessage("§7🎲 Dadu memicu roll...");
+                Bukkit.broadcastMessage("§7🎲 " + diceColor + player.getName()
+                        + " §7memutuskan nasib dengan " + diceLabel + "...");
                 plugin.getRollCommand().executePendingRoll(player, pending);
             } else {
-                // Free roll sesuai tipe dadu
                 int sides = placedDice != null ? placedDice.getSides() : 20;
                 int roll = DiceRoller.roll(sides);
-                String color = placedDice != null ? placedDice.getColor() : "§f";
-                String label = placedDice != null ? placedDice.getLabel() : "D?";
-                player.sendTitle(color + "🎲 " + roll, "§7Free roll (" + label + ")", 5, 40, 10);
-                player.sendMessage("§7🎲 " + color + label + ": §f" + roll);
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
+                String title = diceColor + "§l🎲 " + roll;
+                String sub = "§7" + player.getName() + " rolls " + diceLabel;
+                // Show title to roller, broadcast to all
+                player.sendTitle(title, sub, 5, 60, 20);
+                Bukkit.broadcastMessage("§7🎲 " + diceColor + player.getName()
+                        + " §7rolls " + diceLabel + ": " + diceColor + "§l" + roll);
+                Bukkit.getOnlinePlayers().forEach(p ->
+                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, 1.0f));
             }
 
             returnDice(player, diceItem);
 
-        }, 22L); // ~1.1 detik
+        }, 25L); // ~1.25 detik
     }
 
 }

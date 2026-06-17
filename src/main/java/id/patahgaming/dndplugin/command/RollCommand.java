@@ -113,7 +113,7 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Free roll dengan dadu di tangan (tanpa PendingRoll). */
+    /** Free roll dengan dadu di tangan (tanpa PendingRoll). Broadcast ke semua. */
     private void freeDiceRoll(Player player) {
         DiceType dice = DiceItemFactory.getDiceType(player.getInventory().getItemInMainHand());
         if (dice == null) {
@@ -122,9 +122,11 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             return;
         }
         int roll = DiceRoller.roll(dice.getSides());
-        player.sendTitle(dice.getColor() + "🎲 " + roll, "§7" + dice.getLabel() + " free roll", 5, 40, 10);
-        player.sendMessage("§7🎲 " + dice.getColor() + dice.getLabel() + ": §f" + roll);
-        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
+        player.sendTitle(dice.getColor() + "§l🎲 " + roll, "§7" + dice.getLabel() + " free roll", 5, 50, 20);
+        Bukkit.broadcastMessage("§7🎲 " + dice.getColor() + player.getName()
+                + " §7rolls " + dice.getLabel() + ": " + dice.getColor() + "§l" + roll);
+        Bukkit.getOnlinePlayers().forEach(p ->
+                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, 1.0f));
     }
 
     // ==================== PENDING ROLL EXECUTION ====================
