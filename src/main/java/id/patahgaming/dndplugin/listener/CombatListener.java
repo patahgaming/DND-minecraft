@@ -1,5 +1,7 @@
 package id.patahgaming.dndplugin.listener;
 
+import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
@@ -9,13 +11,15 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.Plugin;
 
 import java.time.Duration;
 import java.util.Map;
@@ -33,11 +37,41 @@ public class CombatListener implements Listener {
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
     private static final long TITLE_COOLDOWN_MS = 600; // min 600ms antar title
 
-    private final Plugin plugin;
+    private final DndPlugin plugin;
     private final Map<UUID, Long> lastTitleTime = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public CombatListener(Plugin plugin) {
+    public CombatListener(DndPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    /**
+     * IMMUNITY: Player hanya bisa kena damage dari mob saat BATTLE AKTIF.
+     * Di luar battle, semua damage dari mob ke player di-cancel.
+     *
+     * Tetap allow: environmental damage (fall, lava, drowning, etc.),
+     * player-vs-player (future PvP), dan damage dari non-mob source.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlayerDamageImmunity(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        // Only cancel mob-sourced attacks
+        if (!(event instanceof EntityDamageByEntityEvent entityEvent)) return;
+
+        // Allow non-mob sources (players, projectiles from dispensers, etc.)
+        if (!(entityEvent.getDamager() instanceof Mob)) return;
+
+        TurnManager tm = plugin.getTurnManager();
+        if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
+            // No active battle → cancel all mob damage
+            event.setCancelled(true);
+            return;
+        }
+
+        // Battle active → only allow damage from battle participants
+        if (!tm.getParticipants().containsKey(entityEvent.getDamager().getUniqueId())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
