@@ -11,34 +11,36 @@ import java.util.Map;
  */
 public enum CharacterClass {
 
-    FIGHTER("Fighter", 10, "d10", "str", List.of("str", "con"),
+    // Base HP dibuff 2× D&D standard — Minecraft combat lebih frequent,
+    // player gak boleh mati 1-hit dari zombie (crit 2d6+1 = max 13).
+    FIGHTER("Fighter", 20, "d10", "str", List.of("str", "con"),
             List.of("athletics", "perception", "survival", "intimidation", "acrobatics")),
 
-    ROGUE("Rogue", 8, "d8", "dex", List.of("dex", "int"),
+    ROGUE("Rogue", 16, "d8", "dex", List.of("dex", "int"),
             List.of("stealth", "acrobatics", "sleight_of_hand", "investigation", "perception", "deception")),
 
-    WIZARD("Wizard", 6, "d6", "int", List.of("int", "wis"),
+    WIZARD("Wizard", 12, "d6", "int", List.of("int", "wis"),
             List.of("investigation", "insight", "perception")),
 
-    CLERIC("Cleric", 8, "d8", "wis", List.of("wis", "cha"),
+    CLERIC("Cleric", 16, "d8", "wis", List.of("wis", "cha"),
             List.of("insight", "persuasion", "perception", "survival")),
 
-    BARBARIAN("Barbarian", 12, "d12", "str", List.of("str", "con"),
+    BARBARIAN("Barbarian", 24, "d12", "str", List.of("str", "con"),
             List.of("athletics", "intimidation", "survival", "perception")),
 
-    RANGER("Ranger", 10, "d10", "dex", List.of("str", "dex"),
+    RANGER("Ranger", 20, "d10", "dex", List.of("str", "dex"),
             List.of("stealth", "survival", "perception", "investigation", "athletics")),
 
-    PALADIN("Paladin", 10, "d10", "str", List.of("wis", "cha"),
+    PALADIN("Paladin", 20, "d10", "str", List.of("wis", "cha"),
             List.of("athletics", "intimidation", "persuasion", "insight")),
 
-    WARLOCK("Warlock", 8, "d8", "cha", List.of("wis", "cha"),
+    WARLOCK("Warlock", 16, "d8", "cha", List.of("wis", "cha"),
             List.of("deception", "intimidation", "investigation", "persuasion")),
 
-    MONK("Monk", 8, "d8", "dex", List.of("str", "dex"),
+    MONK("Monk", 16, "d8", "dex", List.of("str", "dex"),
             List.of("acrobatics", "athletics", "stealth", "insight")),
 
-    DRUID("Druid", 8, "d8", "wis", List.of("int", "wis"),
+    DRUID("Druid", 16, "d8", "wis", List.of("int", "wis"),
             List.of("survival", "perception", "insight", "investigation"));
 
     private final String displayName;
