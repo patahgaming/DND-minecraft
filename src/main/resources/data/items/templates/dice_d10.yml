@@ -1,0 +1,11 @@
+item_id: dice_d10
+display_name: "Dadu D10"
+rarity: COMMON
+item_type: DICE
+minecraft_material: CYAN_WOOL
+dice_type: D10
+lore:
+  - "§7Letakkan di tanah untuk roll bebas"
+  - "§7Pegang di tangan saat /roll untuk combat"
+  - "§8[DnD Dice — D10]"
+special_effect: null

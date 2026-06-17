@@ -1,0 +1,11 @@
+item_id: dice_d8
+display_name: "Dadu D8"
+rarity: COMMON
+item_type: DICE
+minecraft_material: LIME_WOOL
+dice_type: D8
+lore:
+  - "§7Letakkan di tanah untuk roll bebas"
+  - "§7Pegang di tangan saat /roll untuk combat"
+  - "§8[DnD Dice — D8]"
+special_effect: null

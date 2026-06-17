@@ -1,0 +1,11 @@
+item_id: dice_d4
+display_name: "Dadu D4"
+rarity: COMMON
+item_type: DICE
+minecraft_material: PINK_WOOL
+dice_type: D4
+lore:
+  - "§7Letakkan di tanah untuk roll bebas"
+  - "§7Pegang di tangan saat /roll untuk combat"
+  - "§8[DnD Dice — D4]"
+special_effect: null

@@ -1,8 +1,10 @@
 package id.patahgaming.dndplugin.listener;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.dice.DiceItemFactory;
 import id.patahgaming.dndplugin.ui.ScoreboardManager;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +13,8 @@ import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 /**
  * Saat player join:
@@ -31,11 +35,28 @@ public class PlayerJoinListener implements Listener {
         this.plugin = plugin;
     }
 
+    private static final NamespacedKey KEY_DICE_PACK = new NamespacedKey("dndplugin", "received_dice_pack");
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         plugin.getPlayerDataStore().initIfAbsent(player);
         ScoreboardManager.showCharacterSheet(plugin, player);
+
+        // Dice starter pack — sekali aja
+        var pdc = player.getPersistentDataContainer();
+        if (!pdc.has(KEY_DICE_PACK, PersistentDataType.BOOLEAN)) {
+            pdc.set(KEY_DICE_PACK, PersistentDataType.BOOLEAN, true);
+            ItemStack[] dicePack = DiceItemFactory.createStarterPack();
+            for (ItemStack dice : dicePack) {
+                if (player.getInventory().firstEmpty() == -1) {
+                    player.getWorld().dropItem(player.getLocation(), dice);
+                } else {
+                    player.getInventory().addItem(dice);
+                }
+            }
+            player.sendMessage("§a🎲 Dice starter pack diberikan! §7(D4 D6 D8 D10 D12 D20)");
+        }
     }
 
     @EventHandler

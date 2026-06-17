@@ -1,6 +1,8 @@
 package id.patahgaming.dndplugin.item.listener;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.dice.DiceItemFactory;
+import id.patahgaming.dndplugin.dice.DiceType;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import org.bukkit.*;
@@ -10,11 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.EulerAngle;
 
 import java.util.Random;
@@ -60,10 +58,17 @@ public class DiceBlockListener implements Listener {
     }
 
     private boolean isDiceItem(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) return false;
-        var pdc = item.getItemMeta().getPersistentDataContainer();
-        String type = pdc.get(KEY_ITEM_TYPE, PersistentDataType.STRING);
-        return "DICE".equals(type);
+        return DiceItemFactory.isDice(item);
+    }
+
+    private void returnDice(Player player, ItemStack diceItem) {
+        ItemStack copy = diceItem.clone();
+        copy.setAmount(1);
+        if (player.getInventory().firstEmpty() == -1) {
+            player.getWorld().dropItem(player.getLocation(), copy);
+        } else {
+            player.getInventory().addItem(copy);
+        }
     }
 
     private void playDiceAnimation(Player player, Location loc, ItemStack diceItem) {
@@ -125,44 +130,35 @@ public class DiceBlockListener implements Listener {
 
             // Trigger roll untuk player — sama seperti /roll command
             PendingRoll pending = PendingRoll.get(player);
+            DiceType placedDice = DiceItemFactory.getDiceType(diceItem);
             if (pending != null) {
-                // Resolve PendingRoll via RollCommand (full flow: hit/miss → damage → next turn)
+                // Check dice type match
+                DiceType required = DiceType.fromDiceExpr(pending.diceExpr);
+                if (placedDice != required && required != null) {
+                    player.sendMessage("§c⚠ Salah dadu! Butuh " + required.getColor() + required.getLabel()
+                            + " (" + required.getColorName() + " Wool)§c, kamu letakkan "
+                            + (placedDice != null ? placedDice.getColor() + placedDice.getLabel() : "?") + ".");
+                    // Tetap kembalikan dadu
+                    returnDice(player, diceItem);
+                    return;
+                }
+                // Resolve PendingRoll via RollCommand (full flow)
                 player.sendMessage("§7🎲 Dadu memicu roll...");
                 plugin.getRollCommand().executePendingRoll(player, pending);
             } else {
-                // Free d20 roll (no pending)
-                int roll = DiceRoller.roll(20);
-                player.sendTitle("§f§l🎲 " + roll, "§7Free roll (d20)", 5, 40, 10);
-                player.sendMessage("§7🎲 Dadu d20: §f" + roll);
+                // Free roll sesuai tipe dadu
+                int sides = placedDice != null ? placedDice.getSides() : 20;
+                int roll = DiceRoller.roll(sides);
+                String color = placedDice != null ? placedDice.getColor() : "§f";
+                String label = placedDice != null ? placedDice.getLabel() : "D?";
+                player.sendTitle(color + "🎲 " + roll, "§7Free roll (" + label + ")", 5, 40, 10);
+                player.sendMessage("§7🎲 " + color + label + ": §f" + roll);
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
             }
 
-            // Return dice to player
-            ItemStack copy = diceItem.clone();
-            copy.setAmount(1);
-            if (player.getInventory().firstEmpty() == -1) {
-                player.getWorld().dropItem(player.getLocation(), copy);
-            } else {
-                player.getInventory().addItem(copy);
-            }
+            returnDice(player, diceItem);
 
         }, 22L); // ~1.1 detik
     }
 
-    /**
-     * Create a dice item (wool block with PDC).
-     */
-    public static ItemStack createDiceItem() {
-        ItemStack dice = new ItemStack(Material.WHITE_WOOL);
-        ItemMeta meta = dice.getItemMeta();
-        if (meta == null) return dice;
-
-        meta.setDisplayName("§f🎲 Dadu D20");
-        meta.setLore(java.util.List.of("§7Letakkan di tanah untuk roll", "§8[DnD Dice]"));
-        meta.getPersistentDataContainer().set(KEY_ITEM_TYPE, PersistentDataType.STRING, "DICE");
-        meta.getPersistentDataContainer().set(KEY_DICE_TYPE, PersistentDataType.STRING, "D20");
-
-        dice.setItemMeta(meta);
-        return dice;
-    }
 }

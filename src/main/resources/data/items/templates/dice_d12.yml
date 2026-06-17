@@ -1,0 +1,11 @@
+item_id: dice_d12
+display_name: "Dadu D12"
+rarity: COMMON
+item_type: DICE
+minecraft_material: PURPLE_WOOL
+dice_type: D12
+lore:
+  - "§7Letakkan di tanah untuk roll bebas"
+  - "§7Pegang di tangan saat /roll untuk combat"
+  - "§8[DnD Dice — D12]"
+special_effect: null

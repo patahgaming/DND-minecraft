@@ -168,8 +168,8 @@ public class TurnManager {
                 : "";
 
         player.sendMessage("§c💀 Giliran death saving throw!" + progress);
-        player.sendMessage("§7Ketik §f/roll §7untuk roll d20");
-        player.sendTitle("§c§lDEATH SAVE", "§7Ketik /roll sekarang" + progress, 5, 60, 10);
+        player.sendMessage("§7Pegang §fD20 (White Wool)§7 lalu ketik §f/roll");
+        player.sendTitle("§c§lDEATH SAVE", "§7Pegang D20 + /roll" + progress, 5, 60, 10);
 
         // Set PendingRoll DEATH_SAVE — RollCommand resolve via resolveDeathSave()
         PendingRoll pr = new PendingRoll();

@@ -1,6 +1,7 @@
 package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
+import id.patahgaming.dndplugin.dice.DiceType;
 import id.patahgaming.dndplugin.engine.combat.CombatEngine;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
@@ -122,11 +123,13 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
         // Build & set ATTACK PendingRoll via shared builder
         PendingRoll pr = buildAttackPendingRoll(plugin, player, target, attackType, wStats);
 
-        // Prompt
+        // Prompt — include dice info
         int targetAC = Integer.parseInt(pr.context.get("targetAC"));
+        DiceType d20 = DiceType.D20;
         player.sendMessage((melee ? "§c⚔ [Melee] " : "§c🏹 [Ranged] ")
                 + player.getName() + " menyerang " + pr.context.get("targetName")
-                + "! Ketik §e/roll §7(" + pr.diceExpr + " vs AC " + targetAC + ")");
+                + "! Pegang " + d20.getColor() + d20.getLabel() + " (" + d20.getColorName() + " Wool)"
+                + "§7 lalu §e/roll §7(" + pr.diceExpr + " vs AC " + targetAC + ")");
 
         // player now controls flow via /roll — RollCommand resolves everything
         return true;

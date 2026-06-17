@@ -2,6 +2,9 @@ package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.CharacterClass;
+import id.patahgaming.dndplugin.dice.DiceItemFactory;
+import id.patahgaming.dndplugin.dice.DiceType;
+import id.patahgaming.dndplugin.dice.DiceValidator;
 import id.patahgaming.dndplugin.engine.combat.CombatEngine;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.SpellEngine;
@@ -76,37 +79,70 @@ public class RollCommand implements CommandExecutor, TabCompleter {
 
         PendingRoll pending = PendingRoll.get(player);
 
+        // /roll <skill> — skill check bypass validasi dadu (pakai D20 virtual)
+        if (args.length >= 1 && ROLL_TYPE_ABILITY.containsKey(args[0].toLowerCase())) {
+            String rollType = args[0].toLowerCase();
+            if (pending != null && !pending.rollType.matches(rollType)) {
+                player.sendMessage("§cYang perlu di-roll sekarang: §e" + pending.rollType.getKey());
+                player.sendMessage("§7Atau ketik §e/roll §7tanpa argumen untuk auto-detect.");
+                return true;
+            }
+            if (pending != null) {
+                executePendingRoll(player, pending);
+            } else {
+                executeFreeRoll(player, rollType);
+            }
+            return true;
+        }
+
+        // /roll (no args) — butuh dadu fisik
         if (args.length < 1) {
             if (pending != null) {
-                player.sendMessage("§7Auto-detected: rolling " + pending.rollType.name().toLowerCase());
+                // Combat roll — validasi dadu
                 executePendingRoll(player, pending);
                 return true;
             }
-            player.sendMessage("§7Gunakan: /roll <jenis_tindakan>. Contoh: /roll stealth");
+            // Free roll — butuh dadu di tangan
+            freeDiceRoll(player);
             return true;
         }
 
-        String rollType = args[0].toLowerCase();
-
-        // Guard: kalau ada pending, harus match
-        if (pending != null && !pending.rollType.matches(rollType)) {
-            player.sendMessage("§cYang perlu di-roll sekarang: §e" + pending.rollType.getKey());
-            player.sendMessage("§7Atau ketik §e/roll §7tanpa argumen untuk auto-detect.");
-            return true;
-        }
-
-        if (pending != null) {
-            executePendingRoll(player, pending);
-        } else {
-            executeFreeRoll(player, rollType);
-        }
+        // /roll dengan argumen bukan skill → tolak
+        player.sendMessage("§7Gunakan: §e/roll §7atau §e/roll <skill>");
+        player.sendMessage("§7Skill: athletics acrobatics stealth perception investigation insight persuasion deception intimidation sleight_of_hand survival initiative");
         return true;
+    }
+
+    /** Free roll dengan dadu di tangan (tanpa PendingRoll). */
+    private void freeDiceRoll(Player player) {
+        DiceType dice = DiceItemFactory.getDiceType(player.getInventory().getItemInMainHand());
+        if (dice == null) {
+            player.sendMessage("§c⚠ Pegang dadu dulu untuk free roll.");
+            player.sendMessage("§7Atau ketik §f/roll <skill>§7 untuk skill check.");
+            return;
+        }
+        int roll = DiceRoller.roll(dice.getSides());
+        player.sendTitle(dice.getColor() + "🎲 " + roll, "§7" + dice.getLabel() + " free roll", 5, 40, 10);
+        player.sendMessage("§7🎲 " + dice.getColor() + dice.getLabel() + ": §f" + roll);
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.0f);
     }
 
     // ==================== PENDING ROLL EXECUTION ====================
 
     /** Public — dipanggil dari DiceBlockListener (dadu fisik). */
     public void executePendingRoll(Player player, PendingRoll pending) {
+        // Validasi dadu — cek main hand cocok dengan diceExpr
+        DiceType required = DiceType.fromDiceExpr(pending.diceExpr);
+        if (required != null) {
+            DiceValidator.ValidationResult v = DiceValidator.validate(player, required);
+            if (!v.valid) {
+                player.sendMessage(DiceValidator.formatError(required, v));
+                player.sendTitle("§c⚠ Ganti Dadu!", "§7Butuh " + required.getColor() + required.getLabel()
+                        + " §7(" + required.getColorName() + " Wool)", 5, 50, 10);
+                return; // STOP — jangan resolve
+            }
+        }
+
         // Roll the engine diceExpr (anti-cheat)
         int rollResult = DiceRoller.parseAndRoll(pending.diceExpr);
 

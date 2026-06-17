@@ -1,0 +1,11 @@
+item_id: dice_d6
+display_name: "Dadu D6"
+rarity: COMMON
+item_type: DICE
+minecraft_material: ORANGE_WOOL
+dice_type: D6
+lore:
+  - "§7Letakkan di tanah untuk roll bebas"
+  - "§7Pegang di tangan saat /roll untuk combat"
+  - "§8[DnD Dice — D6]"
+special_effect: null

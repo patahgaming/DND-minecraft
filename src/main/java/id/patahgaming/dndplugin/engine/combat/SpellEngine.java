@@ -4,6 +4,7 @@ import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.data.SpellDataStore;
 import id.patahgaming.dndplugin.data.SpellDataStore.SpellData;
+import id.patahgaming.dndplugin.dice.DiceType;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -111,7 +112,8 @@ public class SpellEngine {
 
         PendingRoll.set(caster, pr);
 
-        result.promptMsg = "§d🔮 " + spell.displayName() + "! Ketik §e/roll §d(" + diceExpr + " vs AC " + targetAC + ")";
+        result.promptMsg = "§d🔮 " + spell.displayName() + "! " + diceHint(diceExpr)
+                + " §7lalu §e/roll §d(" + diceExpr + " vs AC " + targetAC + ")";
         caster.sendMessage(result.promptMsg);
     }
 
@@ -160,7 +162,8 @@ public class SpellEngine {
                 : "§7(full damage)";
 
         result.promptMsg = "§d🔮 " + spell.displayName() + "! §7[" + saveStat.toUpperCase()
-                + " save " + saveResultText + "§7] Ketik §e/roll §d(" + pr.diceExpr + " " + spell.damageType() + " → " + safeName(target) + ") " + dmgHint;
+                + " save " + saveResultText + "§7] " + diceHint(pr.diceExpr)
+                + " §7lalu §e/roll §d(" + pr.diceExpr + " " + spell.damageType() + " → " + safeName(target) + ") " + dmgHint;
         caster.sendMessage(result.promptMsg);
     }
 
@@ -192,7 +195,8 @@ public class SpellEngine {
 
         PendingRoll.set(caster, pr);
 
-        result.promptMsg = "§d✨ " + spell.displayName() + " auto-hit! Ketik §e/roll §d(" + pr.diceExpr + " " + spell.damageType() + " damage)";
+        result.promptMsg = "§d✨ " + spell.displayName() + " auto-hit! " + diceHint(pr.diceExpr)
+                + " §7lalu §e/roll §d(" + pr.diceExpr + " " + spell.damageType() + " damage)";
         caster.sendMessage(result.promptMsg);
     }
 
@@ -265,7 +269,8 @@ public class SpellEngine {
 
         String critLabel = crit ? "§e§lCRIT! " : "§aHit! ";
         r.nextPrompt = "§d" + critLabel + totalAttack + " vs AC " + targetAC
-                + "§d! Ketik §e/roll §d(" + finalDice + " " + damageType + " damage)";
+                + "§d! " + diceHint(finalDice)
+                + " §7lalu §e/roll §d(" + finalDice + " " + damageType + " damage)";
         r.narrationText = critLabel + spellName + ": " + finalDice + " " + damageType;
 
         Bukkit.broadcastMessage("§d[Spell]§r " + caster.getName() + " casts §b" + spellName
@@ -422,7 +427,8 @@ public class SpellEngine {
                 : "§7(full damage)";
 
         r.nextPrompt = "§d🔮 Target berikutnya: " + nextTarget.name
-                + " §7[" + saveResultText + "§7] Ketik §e/roll §d(" + diceExpr + " " + damageType + " → " + nextTarget.name + ") " + dmgHint;
+                + " §7[" + saveResultText + "§7] " + diceHint(diceExpr)
+                + " §7lalu §e/roll §d(" + diceExpr + " " + damageType + " → " + nextTarget.name + ") " + dmgHint;
 
         return r;
     }
@@ -467,6 +473,12 @@ public class SpellEngine {
             }
         }
         return null;
+    }
+
+    /** Format pesan "Pegang D8 (Lime Wool)" untuk prompt. */
+    private static String diceHint(String diceExpr) {
+        DiceType dt = DiceType.fromDiceExpr(diceExpr);
+        return "Pegang " + dt.getColor() + dt.getLabel() + " (" + dt.getColorName() + " Wool)";
     }
 
     private static String safeName(LivingEntity e) {
