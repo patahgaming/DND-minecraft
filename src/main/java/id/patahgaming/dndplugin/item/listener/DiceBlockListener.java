@@ -12,6 +12,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.EulerAngle;
 
@@ -46,15 +49,45 @@ public class DiceBlockListener implements Listener {
         // Cancel block place vanilla — jangan taruh wool beneran
         event.setCancelled(true);
 
+        // CLONE dulu — getItemInHand() return snapshot di Paper modern,
+        // kalau amount jadi 0 ItemMeta hilang → getDiceType() return null → "D?"
+        ItemStack diceSnapshot = item.clone();
+
         // Consume 1 dice from hand (will be returned after animation)
         item.setAmount(item.getAmount() - 1);
         if (item.getAmount() <= 0) {
             player.getInventory().setItemInMainHand(null);
         }
 
-        // Play dice animation
+        // Play dice animation dengan SNAPSHOT (masih punya amount + PDC valid)
         Location diceLoc = event.getBlock().getLocation().add(0.5, 0, 0.5);
-        playDiceAnimation(player, diceLoc, item);
+        playDiceAnimation(player, diceLoc, diceSnapshot);
+    }
+
+    /** Cegah dadu di-drop — dadu permanen, gak bisa dibuang. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDiceDrop(PlayerDropItemEvent event) {
+        if (DiceItemFactory.isDice(event.getItemDrop().getItemStack())) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage("§c🎲 Dadu tidak bisa dibuang! Dadu selalu ada di hotbarmu.");
+        }
+    }
+
+    /** Cegah dadu dipindah ke luar inventory (crafting table, chest, dll). */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDiceMove(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        ItemStack cursor = event.getCursor();
+        ItemStack current = event.getCurrentItem();
+
+        // Cegah dadu ditaruh di luar player inventory (chest, crafting, etc.)
+        if (event.getClickedInventory() != null
+                && event.getClickedInventory().getType() != InventoryType.PLAYER
+                && event.getClickedInventory().getType() != InventoryType.CRAFTING) {
+            if (DiceItemFactory.isDice(cursor) || DiceItemFactory.isDice(current)) {
+                event.setCancelled(true);
+            }
+        }
     }
 
     private boolean isDiceItem(ItemStack item) {

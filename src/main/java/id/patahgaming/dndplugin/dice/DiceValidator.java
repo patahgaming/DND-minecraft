@@ -92,8 +92,9 @@ public class DiceValidator {
     }
 
     /**
-     * Arrange semua 6 dadu ke hotbar paling kanan (slot 3-8).
-     * Dipanggil saat player join.
+     * Arrange + ENSURE semua 6 dadu selalu ada di hotbar paling kanan (slot 3-8).
+     * Kalau ada dadu yang hilang → auto-create.
+     * Dipanggil saat player join atau setiap kali validasi.
      */
     public static void arrangeDiceToHotbar(Player player) {
         PlayerInventory inv = player.getInventory();
@@ -101,16 +102,25 @@ public class DiceValidator {
 
         // Kumpulin dadu dari seluruh inventory + hotbar
         ItemStack[] found = new ItemStack[allDice.length];
+        boolean[] hasDice = new boolean[allDice.length];
         for (int slot = 0; slot < 36; slot++) {
             ItemStack item = inv.getItem(slot);
             if (item == null) continue;
             DiceType dt = DiceItemFactory.getDiceType(item);
             if (dt != null) {
                 int idx = dt.ordinal();
-                if (found[idx] == null) {
+                if (!hasDice[idx]) {
                     found[idx] = item.clone();
+                    hasDice[idx] = true;
                     inv.setItem(slot, null); // remove dari posisi lama
                 }
+            }
+        }
+
+        // Kalau ada dadu yang gak ketemu → create baru
+        for (int i = 0; i < allDice.length; i++) {
+            if (!hasDice[i]) {
+                found[i] = DiceItemFactory.create(allDice[i]);
             }
         }
 
