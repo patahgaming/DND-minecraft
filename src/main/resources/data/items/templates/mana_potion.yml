@@ -1,0 +1,10 @@
+item_id: mana_potion
+display_name: "Mana Potion"
+rarity: UNCOMMON
+item_type: CONSUMABLE
+minecraft_material: POTION
+heal_dice: ""
+lore:
+  - "§7Ramuan biru berkilau"
+  - "§7Restore 1 spell slot"
+special_effect: null

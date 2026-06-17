@@ -1,0 +1,13 @@
+item_id: light_crossbow
+display_name: "Light Crossbow"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: CROSSBOW
+damage_dice: "1d8"
+damage_bonus: 0
+damage_type: PIERCING
+attack_type: RANGED
+lore:
+  - "§7Busur silang ringan"
+  - "§7Ranged — jarak jauh"
+special_effect: null

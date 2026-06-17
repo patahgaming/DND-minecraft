@@ -1,0 +1,13 @@
+item_id: quarterstaff
+display_name: "Quarterstaff"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: STICK
+damage_dice: "1d6"
+damage_bonus: 0
+damage_type: BLUDGEONING
+attack_type: MELEE
+lore:
+  - "§7Tongkat kayu panjang"
+  - "§7Cocok untuk spellcaster"
+special_effect: null

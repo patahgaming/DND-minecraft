@@ -1,0 +1,11 @@
+item_id: shield_wooden
+display_name: "Wooden Shield"
+rarity: COMMON
+item_type: ARMOR
+minecraft_material: SHIELD
+ac_bonus: 2
+slot: OFFHAND
+lore:
+  - "§7Perisai kayu sederhana"
+  - "§7AC +2"
+special_effect: null

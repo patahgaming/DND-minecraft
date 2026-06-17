@@ -1,0 +1,13 @@
+item_id: warhammer
+display_name: "Warhammer"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: STONE_AXE
+damage_dice: "1d8"
+damage_bonus: 0
+damage_type: BLUDGEONING
+attack_type: MELEE
+lore:
+  - "§7Palu perang standar"
+  - "§7Bludgeoning — efektif lawan skeleton"
+special_effect: null

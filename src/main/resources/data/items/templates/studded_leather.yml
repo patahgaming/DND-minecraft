@@ -1,0 +1,11 @@
+item_id: studded_leather
+display_name: "Studded Leather Armor"
+rarity: UNCOMMON
+item_type: ARMOR
+minecraft_material: LEATHER_CHESTPLATE
+ac_bonus: 2
+slot: CHEST
+lore:
+  - "§7Kulit bertatahkan logam"
+  - "§7AC +2 — light armor"
+special_effect: null

@@ -1,0 +1,10 @@
+item_id: antidote
+display_name: "Antidote"
+rarity: COMMON
+item_type: CONSUMABLE
+minecraft_material: POTION
+heal_dice: ""
+lore:
+  - "§7Ramuan hijau pahit"
+  - "§7Cures Poisoned condition"
+special_effect: null

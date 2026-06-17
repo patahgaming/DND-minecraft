@@ -94,9 +94,12 @@ public class ItemSpesialManager {
         // (folder data/items/custom/) — tidak perlu ditambah ke array ini.
         String[] templates = {
                 "shortsword_iron", "longsword_iron", "shortbow_wood",
+                "dagger", "greataxe", "warhammer", "light_crossbow", "quarterstaff",
                 "longsword_plus1", "flaming_sword", "soul_reaper",
-                "leather_vest", "chainmail", "plate_of_thornhollow",
-                "health_potion", "greater_health_potion",
+                "leather_vest", "studded_leather", "chainmail", "plate_of_thornhollow",
+                "shield_wooden",
+                "health_potion", "greater_health_potion", "mana_potion", "antidote",
+                "ring_of_protection",
                 "ancient_key", "elder_seal",
                 "dice_d4", "dice_d6", "dice_d8", "dice_d10", "dice_d12", "dice_d20"
         };

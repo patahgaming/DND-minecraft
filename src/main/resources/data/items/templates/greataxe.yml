@@ -1,0 +1,13 @@
+item_id: greataxe
+display_name: "Greataxe"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: IRON_AXE
+damage_dice: "1d12"
+damage_bonus: 0
+damage_type: SLASHING
+attack_type: MELEE
+lore:
+  - "§7Kapak besar dua tangan"
+  - "§7Heavy — damage tinggi tapi lambat"
+special_effect: null

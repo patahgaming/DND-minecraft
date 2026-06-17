@@ -1,0 +1,13 @@
+item_id: dagger
+display_name: "Dagger"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: IRON_SWORD
+damage_dice: "1d4"
+damage_bonus: 0
+damage_type: PIERCING
+attack_type: MELEE
+lore:
+  - "§7Pisau kecil serbaguna"
+  - "§7Finesse — ringan dan cepat"
+special_effect: null

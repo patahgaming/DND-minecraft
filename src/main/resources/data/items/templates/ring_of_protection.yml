@@ -1,0 +1,9 @@
+item_id: ring_of_protection
+display_name: "Ring of Protection"
+rarity: RARE
+item_type: ACCESSORY
+minecraft_material: IRON_NUGGET
+lore:
+  - "§7Cincin perak dengan ukiran pelindung"
+  - "§7AC +1 saat dipakai"
+special_effect: null
