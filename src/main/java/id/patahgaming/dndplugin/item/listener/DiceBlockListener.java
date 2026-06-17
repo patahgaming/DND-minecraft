@@ -163,14 +163,7 @@ public class DiceBlockListener implements Listener {
                     world.playSound(stand.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 0.3f, 0.8f);
                 }
 
-                // Broadcast progress ke semua player
-                StringBuilder sb = new StringBuilder("§7[");
-                for (int j = 0; j < iterations; j++) {
-                    sb.append(j <= iter ? diceColor + "§l▌" : "§8▌");
-                }
-                sb.append("§7]");
-                final String progressMsg = "§7🎲 " + diceColor + player.getName() + " §7rolls " + diceLabel + "... " + sb;
-                Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage(progressMsg));
+                // Progress bar hanya ke player sendiri (title), jangan spam chat
 
             }, 3L * i); // 3 ticks = 150ms
         }
