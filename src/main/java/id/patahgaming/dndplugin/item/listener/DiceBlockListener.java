@@ -183,7 +183,7 @@ public class DiceBlockListener implements Listener {
             world.spawnParticle(Particle.TOTEM_OF_UNDYING,
                     stand.getLocation().add(0, 0.5, 0),
                     20, 0.6, 0.6, 0.6, 0.15);
-            world.spawnParticle(Particle.ENTITY_EFFECT,
+            world.spawnParticle(Particle.END_ROD,
                     stand.getLocation().add(0, 0.3, 0),
                     10, 0.3, 0.3, 0.3, 0.08);
 
