@@ -9,7 +9,7 @@ import id.patahgaming.dndplugin.engine.combat.CombatEngine;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.SpellEngine;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
-import id.patahgaming.dndplugin.engine.dice.DiceRoller;
+import id.patahgaming.dndplugin.dice.DiceRoller;
 import id.patahgaming.dndplugin.ui.TitleDisplay;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;

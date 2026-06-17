@@ -5,7 +5,7 @@ import id.patahgaming.dndplugin.data.CharacterClass;
 import id.patahgaming.dndplugin.data.SpellDataStore;
 import id.patahgaming.dndplugin.data.SpellDataStore.SpellData;
 import id.patahgaming.dndplugin.dice.DiceType;
-import id.patahgaming.dndplugin.engine.dice.DiceRoller;
+import id.patahgaming.dndplugin.dice.DiceRoller;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;

@@ -4,7 +4,7 @@ import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.dice.DiceItemFactory;
 import id.patahgaming.dndplugin.dice.DiceType;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
-import id.patahgaming.dndplugin.engine.dice.DiceRoller;
+import id.patahgaming.dndplugin.dice.DiceRoller;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;

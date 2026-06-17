@@ -104,7 +104,7 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
 
         // DEX check DC 12 untuk kabur
         int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");
-        int roll = id.patahgaming.dndplugin.engine.dice.DiceRoller.roll(20);
+        int roll = id.patahgaming.dndplugin.dice.DiceRoller.roll(20);
         int total = roll + dexMod;
 
         if (roll == 20 || total >= 12) {

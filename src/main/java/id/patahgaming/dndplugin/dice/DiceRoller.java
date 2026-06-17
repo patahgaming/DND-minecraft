@@ -1,4 +1,4 @@
-package id.patahgaming.dndplugin.engine.dice;
+package id.patahgaming.dndplugin.dice;
 
 import java.util.concurrent.ThreadLocalRandom;
 

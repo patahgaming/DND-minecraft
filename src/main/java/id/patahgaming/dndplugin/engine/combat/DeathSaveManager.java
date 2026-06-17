@@ -1,7 +1,7 @@
 package id.patahgaming.dndplugin.engine.combat;
 
 import id.patahgaming.dndplugin.DndPlugin;
-import id.patahgaming.dndplugin.engine.dice.DiceRoller;
+import id.patahgaming.dndplugin.dice.DiceRoller;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
