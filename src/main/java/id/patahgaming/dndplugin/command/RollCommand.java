@@ -136,7 +136,10 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         if (required != null) {
             DiceValidator.ValidationResult v = DiceValidator.validate(player, required);
             if (!v.valid) {
-                player.sendMessage(DiceValidator.formatError(required, v));
+                player.sendMessage(v.message);
+                if (v.wasGiven) {
+                    player.sendMessage("§eKetik §f/roll §elagi setelah pegang dadunya!");
+                }
                 player.sendTitle("§c⚠ Ganti Dadu!", "§7Butuh " + required.getColor() + required.getLabel()
                         + " §7(" + required.getColorName() + " Wool)", 5, 50, 10);
                 return; // STOP — jangan resolve

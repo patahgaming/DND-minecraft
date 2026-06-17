@@ -2,6 +2,7 @@ package id.patahgaming.dndplugin.listener;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.dice.DiceItemFactory;
+import id.patahgaming.dndplugin.dice.DiceValidator;
 import id.patahgaming.dndplugin.ui.ScoreboardManager;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -57,6 +58,9 @@ public class PlayerJoinListener implements Listener {
             }
             player.sendMessage("§a🎲 Dice starter pack diberikan! §7(D4 D6 D8 D10 D12 D20)");
         }
+
+        // Arrange dadu ke hotbar paling kanan (slot 3-8) — tiap join
+        DiceValidator.arrangeDiceToHotbar(player);
     }
 
     @EventHandler
