@@ -1,0 +1,10 @@
+item_id: chainmail
+display_name: "Chainmail"
+rarity: UNCOMMON
+item_type: ARMOR
+minecraft_material: CHAINMAIL_CHESTPLATE
+ac_bonus: 2
+slot: CHEST
+lore:
+  - "§7Zirah rantai besi ringan"
+special_effect: null

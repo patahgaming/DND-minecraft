@@ -33,3 +33,6 @@ commands:
   cast:
     description: Cast spell saat combat
     usage: /cast <spell> [target]
+  itemspesial:
+    description: Item spesial management (create, get, list, info, give)
+    usage: /itemspesial <create|get|list|info|give>

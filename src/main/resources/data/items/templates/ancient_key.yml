@@ -1,0 +1,11 @@
+item_id: ancient_key
+display_name: "Ancient Key"
+rarity: QUEST
+item_type: QUEST
+minecraft_material: PAPER
+quest_node: cave_entrance
+no_drop: true
+lore:
+  - "§7Kunci kuno berkarat dengan ukiran aneh"
+  - "§7Sepertinya cocok dengan pintu goa"
+special_effect: null

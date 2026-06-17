@@ -1,0 +1,10 @@
+item_id: greater_health_potion
+display_name: "Greater Health Potion"
+rarity: UNCOMMON
+item_type: CONSUMABLE
+minecraft_material: POTION
+heal_dice: "4d4+4"
+lore:
+  - "§7Ramuan merah pekat berkekuatan tinggi"
+  - "§7Heal: 4d4+4 HP"
+special_effect: null

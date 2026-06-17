@@ -1,0 +1,10 @@
+item_id: leather_vest
+display_name: "Leather Vest"
+rarity: COMMON
+item_type: ARMOR
+minecraft_material: LEATHER_CHESTPLATE
+ac_bonus: 1
+slot: CHEST
+lore:
+  - "§7Rompi kulit sederhana"
+special_effect: null

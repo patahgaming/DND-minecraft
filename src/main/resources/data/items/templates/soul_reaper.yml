@@ -1,0 +1,13 @@
+item_id: soul_reaper
+display_name: "Soul Reaper"
+rarity: LEGENDARY
+item_type: WEAPON
+minecraft_material: NETHERITE_SWORD
+damage_dice: "1d10"
+damage_bonus: 3
+damage_type: NECROTIC
+attack_type: MELEE
+lore:
+  - "§7Pedang legendaris yang memakan jiwa"
+  - "§7Dibawa oleh Death Knight pertama"
+special_effect: SOUL_CLEAVE

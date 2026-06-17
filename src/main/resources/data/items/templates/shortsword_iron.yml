@@ -1,0 +1,12 @@
+item_id: shortsword_iron
+display_name: "Iron Shortsword"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: STONE_SWORD
+damage_dice: "1d6"
+damage_bonus: 0
+damage_type: SLASHING
+attack_type: MELEE
+lore:
+  - "§7Pedang pendek standar militer"
+special_effect: null

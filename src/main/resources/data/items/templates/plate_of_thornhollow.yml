@@ -1,0 +1,11 @@
+item_id: plate_of_thornhollow
+display_name: "Plate of Thornhollow"
+rarity: RARE
+item_type: ARMOR
+minecraft_material: IRON_CHESTPLATE
+ac_bonus: 3
+slot: CHEST
+lore:
+  - "§7Zirah plat legendaris Thornhollow"
+  - "§7Lambang ordo yang telah hancur"
+special_effect: null

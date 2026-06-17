@@ -190,14 +190,17 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         }
 
         // HIT → set DAMAGE pending
-        String baseDmgDice = melee ? "1d8" : "1d6";
-        int dmgBonus = melee ? strMod : dexMod;
-        String dmgDice = baseDmgDice + "+" + dmgBonus;
+        // Read weapon stats dari context (diisi AtkCommand/WeaponAttackListener)
+        String weaponDice = ctx.getOrDefault("weaponDice", melee ? "1d8" : "1d6");
+        int weaponBonus = Integer.parseInt(ctx.getOrDefault("weaponBonus", "0"));
+        String weaponDmgType = ctx.getOrDefault("weaponDmgType", melee ? "SLASHING" : "PIERCING");
+        int dmgBonus = weaponBonus + (melee ? strMod : dexMod);
+        String dmgDice = weaponDice + "+" + dmgBonus;
         String finalDmgDice = crit ? DiceRoller.doubleDiceExpr(dmgDice) : dmgDice;
 
-        CombatEngine.DamageType dmgType = melee
-                ? CombatEngine.DamageType.SLASHING
-                : CombatEngine.DamageType.PIERCING;
+        CombatEngine.DamageType dmgType;
+        try { dmgType = CombatEngine.DamageType.valueOf(weaponDmgType); }
+        catch (IllegalArgumentException e) { dmgType = CombatEngine.DamageType.SLASHING; }
 
         PendingRoll dmgPr = new PendingRoll();
         dmgPr.rollType = PendingRoll.RollType.DAMAGE;
@@ -207,6 +210,7 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         dmgPr.context.put("targetName", targetName);
         dmgPr.context.put("damageType", dmgType.name());
         dmgPr.context.put("isCrit", String.valueOf(crit));
+        dmgPr.context.put("weaponEffect", ctx.getOrDefault("weaponEffect", "NONE"));
         PendingRoll.set(player, dmgPr);
 
         String critLabel = crit ? "§e§lCRIT! " : "§aHit! ";
@@ -265,7 +269,6 @@ public class RollCommand implements CommandExecutor, TabCompleter {
         // Handle outcome
         switch (dmgResult.outcome) {
             case UNCONSCIOUS -> {
-                // Player HP 0 → DeathSaveManager handles
                 if (target instanceof org.bukkit.entity.Player tp) {
                     plugin.getDeathSaveManager().makeUnconscious(tp);
                 }
@@ -275,6 +278,18 @@ public class RollCommand implements CommandExecutor, TabCompleter {
                 tm.removeParticipant(target);
             }
             case ALIVE -> { /* nothing */ }
+        }
+
+        // Trigger weapon special effect (FIRE_ON_HIT, etc.)
+        String effectStr = ctx.getOrDefault("weaponEffect", "NONE");
+        if (!effectStr.equals("NONE") && !effectStr.equals("null")) {
+            try {
+                id.patahgaming.dndplugin.item.SpecialEffect effect =
+                        id.patahgaming.dndplugin.item.SpecialEffect.valueOf(effectStr);
+                if (effect != id.patahgaming.dndplugin.item.SpecialEffect.NONE) {
+                    effect.onHit(player, target, actualDmg);
+                }
+            } catch (IllegalArgumentException ignored) {}
         }
 
         PendingRoll.clear(player);

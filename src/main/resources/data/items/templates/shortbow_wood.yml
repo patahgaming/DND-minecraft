@@ -1,0 +1,12 @@
+item_id: shortbow_wood
+display_name: "Wooden Shortbow"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: BOW
+damage_dice: "1d6"
+damage_bonus: 0
+damage_type: PIERCING
+attack_type: RANGED
+lore:
+  - "§7Busur kayu sederhana"
+special_effect: null

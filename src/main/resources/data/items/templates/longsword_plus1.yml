@@ -1,0 +1,13 @@
+item_id: longsword_plus1
+display_name: "Longsword +1"
+rarity: UNCOMMON
+item_type: WEAPON
+minecraft_material: IRON_SWORD
+damage_dice: "1d8"
+damage_bonus: 1
+damage_type: SLASHING
+attack_type: MELEE
+lore:
+  - "§7Pedang tempa kuno dari Thornhollow"
+  - "§7Bilahnya berkilau redup di kegelapan"
+special_effect: null

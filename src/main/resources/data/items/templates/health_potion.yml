@@ -1,0 +1,10 @@
+item_id: health_potion
+display_name: "Health Potion"
+rarity: COMMON
+item_type: CONSUMABLE
+minecraft_material: POTION
+heal_dice: "2d4+2"
+lore:
+  - "§7Ramuan merah berbuih"
+  - "§7Heal: 2d4+2 HP"
+special_effect: null

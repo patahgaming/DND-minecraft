@@ -1,0 +1,12 @@
+item_id: longsword_iron
+display_name: "Iron Longsword"
+rarity: COMMON
+item_type: WEAPON
+minecraft_material: IRON_SWORD
+damage_dice: "1d8"
+damage_bonus: 0
+damage_type: SLASHING
+attack_type: MELEE
+lore:
+  - "§7Pedang panjang besi standar"
+special_effect: null

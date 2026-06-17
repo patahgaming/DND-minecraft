@@ -4,12 +4,14 @@ import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.engine.combat.CombatEngine;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
+import id.patahgaming.dndplugin.item.ItemSpesialManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -131,6 +133,18 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
         pr.context.put("attackType", attackType);
         pr.context.put("targetAC", String.valueOf(targetAC));
         pr.context.put("melee", String.valueOf(melee));
+
+        // Weapon stats dari item spesial di main hand (kalau ada)
+        ItemStack weapon = ItemSpesialManager.getWeaponInHand(player);
+        if (weapon != null) {
+            String wDice = ItemSpesialManager.getWeaponDamageDice(weapon);
+            int wBonus = ItemSpesialManager.getWeaponDamageBonus(weapon);
+            String wDmgType = ItemSpesialManager.getWeaponDamageType(weapon).name();
+            pr.context.put("weaponDice", wDice != null ? wDice : (melee ? "1d8" : "1d6"));
+            pr.context.put("weaponBonus", String.valueOf(wBonus));
+            pr.context.put("weaponDmgType", wDmgType);
+            pr.context.put("weaponEffect", ItemSpesialManager.getSpecialEffect(weapon).name());
+        }
 
         PendingRoll.set(player, pr);
 

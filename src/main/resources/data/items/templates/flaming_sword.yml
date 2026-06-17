@@ -1,0 +1,13 @@
+item_id: flaming_sword
+display_name: "Flaming Sword"
+rarity: RARE
+item_type: WEAPON
+minecraft_material: BLAZE_ROD
+damage_dice: "1d8"
+damage_bonus: 2
+damage_type: FIRE
+attack_type: MELEE
+lore:
+  - "§7Pedang yang selalu terbakar"
+  - "§7Ditempa di jantung gunung berapi"
+special_effect: FIRE_ON_HIT
