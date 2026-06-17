@@ -237,7 +237,9 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        int actualDmg = CombatEngine.applyDamage(target, totalDamage, dmgType);
+        // PATCH: DamageResult — handle UNCONSCIOUS vs DEAD
+        CombatEngine.DamageResult dmgResult = CombatEngine.applyDamage(target, totalDamage, dmgType);
+        int actualDmg = dmgResult.finalDamage;
 
         String critLabel = isCrit ? "§e§lCRIT! " : "";
         TitleDisplay.showCombatResult(player,
@@ -249,10 +251,19 @@ public class RollCommand implements CommandExecutor, TabCompleter {
                 + (isCrit ? " §e§lCRIT!" : "")
                 + " §7[rolled:" + totalDamage + "]" );
 
-        // Kill check
-        if (target.getHealth() <= 0) {
-            Bukkit.broadcastMessage("§c§l" + targetName + " has been slain!");
-            tm.removeParticipant(target);
+        // Handle outcome
+        switch (dmgResult.outcome) {
+            case UNCONSCIOUS -> {
+                // Player HP 0 → DeathSaveManager handles
+                if (target instanceof org.bukkit.entity.Player tp) {
+                    plugin.getDeathSaveManager().makeUnconscious(tp);
+                }
+            }
+            case DEAD -> {
+                Bukkit.broadcastMessage("§c§l" + targetName + " has been slain!");
+                tm.removeParticipant(target);
+            }
+            case ALIVE -> { /* nothing */ }
         }
 
         PendingRoll.clear(player);
@@ -324,35 +335,14 @@ public class RollCommand implements CommandExecutor, TabCompleter {
 
     // --- DEATH SAVE ---
     private void resolveDeathSave(Player player, int rollResult) {
+        // Delegate ke TurnManager → DeathSaveManager.processRoll()
+        // DeathSaveManager yang handle dice roll (DiceRoller.roll(20)),
+        // update success/fail count, stabilize/kill decision.
+        // rollResult dari pending sudah tidak dipakai — DeathSaveManager roll ulang.
         PendingRoll.clear(player);
 
-        String resultText;
-        Sound sound;
-        float pitch;
-
-        if (rollResult == 20) {
-            resultText = "§a§lNAT 20! Regain 1 HP";
-            sound = Sound.BLOCK_BELL_RESONATE;
-            pitch = 1.5f;
-            player.setHealth(1.0);
-        } else if (rollResult == 1) {
-            resultText = "§c§lNAT 1! Two failures";
-            sound = Sound.BLOCK_NOTE_BLOCK_BASS;
-            pitch = 0.5f;
-        } else if (rollResult >= 10) {
-            resultText = "§aSuccess! (" + rollResult + ")";
-            sound = Sound.BLOCK_NOTE_BLOCK_CHIME;
-            pitch = 1.2f;
-        } else {
-            resultText = "§cFailure! (" + rollResult + ")";
-            sound = Sound.BLOCK_NOTE_BLOCK_BASS;
-            pitch = 0.8f;
-        }
-
-        TitleDisplay.showCombatResult(player, resultText, "Death Save");
-        player.playSound(player.getLocation(), sound, 0.6f, pitch);
-        Bukkit.broadcastMessage("§8[Death Save]§r " + player.getName()
-                + " rolled " + rollResult + " — " + resultText);
+        TurnManager tm = plugin.getTurnManager();
+        tm.resolveDeathSave(player);
     }
 
     // ==================== QUEUE ====================

@@ -2,7 +2,6 @@ package id.patahgaming.dndplugin.engine.combat;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
@@ -15,6 +14,9 @@ import org.bukkit.entity.Player;
  * - Crit: nat 20 = double damage dice
  * - Damage types: slashing, piercing, bludgeoning, fire, cold, etc.
  * - Resistance: half damage, Vulnerability: double damage
+ *
+ * PATCH v1.0.0.39: applyDamage() returns DamageResult (finalDamage + DamageOutcome).
+ * Player HP 0 → UNCONSCIOUS (DeathSaveManager handles), Mob HP 0 → DEAD.
  */
 public class CombatEngine {
 
@@ -22,6 +24,13 @@ public class CombatEngine {
         SLASHING, PIERCING, BLUDGEONING,
         FIRE, COLD, LIGHTNING, ACID, POISON,
         NECROTIC, RADIANT, FORCE, PSYCHIC
+    }
+
+    /** Outcome dari applyDamage — caller harus handle tiap case. */
+    public enum DamageOutcome {
+        ALIVE,        // target masih hidup, HP > 0
+        UNCONSCIOUS,  // player HP mencapai 0 → death save (bukan langsung mati)
+        DEAD          // mob/NPC HP 0 → mati langsung
     }
 
     public static class AttackResult {
@@ -36,6 +45,17 @@ public class CombatEngine {
         public int totalDamage;
         public DamageType damageType;
         public String flavorText;
+    }
+
+    /** Hasil dari applyDamage — finalDamage + outcome untuk caller. */
+    public static class DamageResult {
+        public int finalDamage;
+        public DamageOutcome outcome;
+
+        public DamageResult(int finalDamage, DamageOutcome outcome) {
+            this.finalDamage = finalDamage;
+            this.outcome = outcome;
+        }
     }
 
     // --- AC Calculation ---
@@ -224,14 +244,55 @@ public class CombatEngine {
         return 2;
     }
 
-    // --- Damage Application ---
+    // --- Damage Application — PATCHED ---
 
-    /** Apply damage to entity, respecting resistance/vulnerability */
-    public static int applyDamage(LivingEntity target, int damage, DamageType type) {
-        double modifier = 1.0;
+    /**
+     * Apply damage ke entity.
+     *
+     * PERBEDAAN dari versi lama:
+     * - Return DamageResult (finalDamage + DamageOutcome) bukan int
+     * - Jika target adalah Player dan HP mencapai 0:
+     *     → setHealth(0.5) — TIDAK langsung mati
+     *     → return UNCONSCIOUS → caller panggil DeathSaveManager
+     * - Jika target adalah mob dan HP mencapai 0:
+     *     → setHealth(0) — langsung mati
+     *     → return DEAD
+     */
+    public static DamageResult applyDamage(LivingEntity target, int damage, DamageType type) {
+        double modifier = getResistanceModifier(target, type);
+        int finalDamage = (int) Math.max(1, damage * modifier);
 
-        // Resistance / vulnerability based on mob type
-        modifier = switch (target.getType()) {
+        double currentHp = target.getHealth();
+        double newHp = currentHp - finalDamage;
+
+        if (target instanceof Player player) {
+            if (newHp <= 0) {
+                // Player HP 0 → jangan kill, serahkan ke DeathSaveManager
+                player.setHealth(0.5);
+                id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
+                return new DamageResult(finalDamage, DamageOutcome.UNCONSCIOUS);
+            } else {
+                player.setHealth(newHp);
+                id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
+                return new DamageResult(finalDamage, DamageOutcome.ALIVE);
+            }
+        } else {
+            // Mob/NPC — langsung mati
+            if (newHp <= 0) {
+                target.setHealth(0.0);
+                id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
+                return new DamageResult(finalDamage, DamageOutcome.DEAD);
+            } else {
+                target.setHealth(newHp);
+                id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
+                return new DamageResult(finalDamage, DamageOutcome.ALIVE);
+            }
+        }
+    }
+
+    /** Resistance / vulnerability modifier per mob type. */
+    private static double getResistanceModifier(LivingEntity target, DamageType type) {
+        return switch (target.getType()) {
             case SKELETON -> type == DamageType.PIERCING ? 0.5 : type == DamageType.BLUDGEONING ? 2.0 : 1.0;
             case ZOMBIE -> type == DamageType.RADIANT ? 2.0 : 1.0;
             case ENDERMAN -> type == DamageType.FIRE || type == DamageType.LIGHTNING ? 0.5 : 1.0;
@@ -239,14 +300,5 @@ public class CombatEngine {
             case IRON_GOLEM -> type == DamageType.POISON || type == DamageType.PSYCHIC ? 0.0 : 1.0;
             default -> 1.0;
         };
-
-        int finalDamage = (int) Math.max(1, damage * modifier);
-        double newHp = Math.max(0, target.getHealth() - finalDamage);
-        target.setHealth(newHp);
-
-        // Trigger combat feedback (setHealth gak fire EntityDamageEvent)
-        id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(target);
-
-        return finalDamage;
     }
 }

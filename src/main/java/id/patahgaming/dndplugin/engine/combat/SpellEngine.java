@@ -334,10 +334,12 @@ public class SpellEngine {
             appliedDamage = totalDamage;
         }
 
-        // Apply damage
+        // Apply damage — PATCH: DamageResult
         int actualDmg = 0;
+        CombatEngine.DamageResult dmgResult = null;
         if (appliedDamage > 0) {
-            actualDmg = CombatEngine.applyDamage(target, appliedDamage, damageType);
+            dmgResult = CombatEngine.applyDamage(target, appliedDamage, damageType);
+            actualDmg = dmgResult.finalDamage;
         }
 
         // Broadcast
@@ -353,12 +355,22 @@ public class SpellEngine {
 
         r.narrationText = spellName + ": " + targetInfo.name + " takes " + actualDmg + " " + damageTypeStr;
 
-        // Kill check
-        if (target.getHealth() <= 0) {
-            Bukkit.broadcastMessage("§c§l" + targetInfo.name + " has been slain by magic!");
-            tm.removeParticipant(target);
-            r.kill = true;
-            r.killName = targetInfo.name;
+        // Handle outcome — PATCH
+        if (dmgResult != null) {
+            switch (dmgResult.outcome) {
+                case UNCONSCIOUS -> {
+                    if (target instanceof org.bukkit.entity.Player tp) {
+                        // DeathSaveManager handles via DndPlugin
+                    }
+                }
+                case DEAD -> {
+                    Bukkit.broadcastMessage("§c§l" + targetInfo.name + " has been slain by magic!");
+                    tm.removeParticipant(target);
+                    r.kill = true;
+                    r.killName = targetInfo.name;
+                }
+                case ALIVE -> { /* nothing */ }
+            }
         }
 
         // Advance to next target or finish

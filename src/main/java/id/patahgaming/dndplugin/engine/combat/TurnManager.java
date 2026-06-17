@@ -6,20 +6,18 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Turn-based combat state machine:
  *
  *   WAITING_TURN → ACTION_SELECTED → RESOLVING → NEXT_TURN
  *
- * - Hanya satu participant yang aktif per giliran
- * - /atk dan /roll hanya valid saat giliran player aktif
- * - HP update → scoreboard sidebar di-refresh oleh listener yang sudah ada
+ * PATCH v1.0.0.39: Death saving throw flow.
+ * - Player HP 0 → UNCONSCIOUS (DeathSaveManager)
+ * - Giliran unconscious → promptDeathSave (set PendingRoll DEATH_SAVE)
+ * - Mob skip unconscious player
+ * - Battle end: unconscious ≠ dead
  */
 public class TurnManager {
 
@@ -44,9 +42,19 @@ public class TurnManager {
 
     private final Map<UUID, LivingEntity> participants = new HashMap<>();
 
+    // DeathSaveManager — di-inject dari DndPlugin
+    private DeathSaveManager deathSaveManager;
+
     public TurnManager(DndPlugin plugin) {
         this.plugin = plugin;
     }
+
+    /** Dipanggil setelah plugin init DeathSaveManager. */
+    public void setDeathSaveManager(DeathSaveManager deathSaveManager) {
+        this.deathSaveManager = deathSaveManager;
+    }
+
+    // ==================== BATTLE START ====================
 
     /**
      * Mulai battle — roll initiative, freeze mobs, mulai round 1.
@@ -90,10 +98,8 @@ public class TurnManager {
         return turnOrder;
     }
 
-    /**
-     * Panggil setelah aksi participant saat ini selesai di-resolve.
-     * Maju ke participant berikutnya atau next round.
-     */
+    // ==================== NEXT TURN — PATCHED ====================
+
     private int nextTurnDepth = 0;
     private static final int MAX_NEXT_TURN_DEPTH = 50;
 
@@ -109,7 +115,7 @@ public class TurnManager {
         currentTurnIndex++;
         combatState = CombatState.WAITING_TURN;
 
-        // Cek battle selesai? (semua musuh mati atau semua player mati)
+        // Cek battle selesai?
         if (checkBattleEnd()) {
             nextTurnDepth = 0;
             endBattle();
@@ -130,9 +136,15 @@ public class TurnManager {
             nextTurn(); // skip dead/missing
             return;
         }
+
         if (entity instanceof Player player) {
-            player.sendMessage("§a⚔ Giliran kamu! §7/atk melee §8| §7/atk ranged §8| §7/cast §8| §7/battle flee");
-            player.sendMessage("§7  Turn: " + getCurrentTurnDisplay());
+            // PATCH: cek apakah player sedang unconscious
+            if (deathSaveManager != null && deathSaveManager.isUnconscious(player)) {
+                promptDeathSave(player);
+            } else {
+                player.sendMessage("§a⚔ Giliran kamu! §7/atk melee §8| §7/atk ranged §8| §7/cast §8| §7/battle flee");
+                player.sendMessage("§7  Turn: " + getCurrentTurnDisplay());
+            }
         } else {
             // Mob turn — auto attack random player
             runMobTurn(entity);
@@ -142,6 +154,61 @@ public class TurnManager {
         nextTurnDepth = 0;
     }
 
+    // ==================== DEATH SAVE — PATCHED ====================
+
+    /**
+     * Prompt player untuk death saving throw.
+     * Dipanggil saat giliran player yang unconscious.
+     */
+    private void promptDeathSave(Player player) {
+        DeathSaveManager.DeathSaveState state = deathSaveManager != null
+                ? deathSaveManager.getState(player) : null;
+        String progress = state != null
+                ? " §8(S:" + state.successes + "/3 F:" + state.failures + "/3)"
+                : "";
+
+        player.sendMessage("§c💀 Giliran death saving throw!" + progress);
+        player.sendMessage("§7Ketik §f/roll §7untuk roll d20");
+        player.sendTitle("§c§lDEATH SAVE", "§7Ketik /roll sekarang" + progress, 5, 60, 10);
+
+        // Set PendingRoll DEATH_SAVE — RollCommand resolve via resolveDeathSave()
+        PendingRoll pr = new PendingRoll();
+        pr.rollType = PendingRoll.RollType.DEATH_SAVE;
+        pr.diceExpr = "d20";
+        pr.context = new LinkedHashMap<>();
+        PendingRoll.set(player, pr);
+    }
+
+    /**
+     * RollCommand panggil ini setelah player /roll saat ada PendingRoll DEATH_SAVE.
+     */
+    public void resolveDeathSave(Player player) {
+        if (deathSaveManager == null) return;
+
+        DeathSaveManager.DeathSaveResult result = deathSaveManager.processRoll(player);
+
+        switch (result) {
+            case STABILIZED -> {
+                plugin.getLogger().info("[DeathSave] " + player.getName() + " stabilized.");
+                Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
+            }
+            case DEAD -> {
+                plugin.getLogger().info("[DeathSave] " + player.getName() + " died.");
+                removeParticipant(player);
+                Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 40L);
+            }
+            case SUCCESS, FAILURE -> {
+                // Masih dalam death save — lanjut ke turn berikutnya
+                Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
+            }
+            default -> {
+                plugin.getLogger().warning("[DeathSave] Unexpected PENDING state for " + player.getName());
+            }
+        }
+    }
+
+    // ==================== MOB TURN — PATCHED ====================
+
     /** Auto-AI untuk mob: unfreeze → serang → re-freeze → next turn. */
     private void runMobTurn(LivingEntity mob) {
         // Unfreeze sementara untuk giliran mob
@@ -149,10 +216,15 @@ public class TurnManager {
             m.setAware(true);
         }
 
+        // PATCH: cari target — skip player unconscious
         Player target = null;
         double closest = Double.MAX_VALUE;
         for (var entry : participants.entrySet()) {
             if (entry.getValue() instanceof Player p && !p.isDead()) {
+                // Skip player yang sedang unconscious
+                if (deathSaveManager != null && deathSaveManager.isUnconscious(p)) {
+                    continue;
+                }
                 double dist = mob.getLocation().distanceSquared(p.getLocation());
                 if (dist < closest) {
                     closest = dist;
@@ -163,7 +235,8 @@ public class TurnManager {
 
         if (target == null) {
             if (mob instanceof Mob m && !(mob instanceof Player)) m.setAware(false);
-            nextTurn();
+            Bukkit.broadcastMessage("§7[Combat] " + safeName(mob) + " tidak menemukan target.");
+            Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
             return;
         }
 
@@ -171,13 +244,25 @@ public class TurnManager {
         CombatEngine.AttackResult result = CombatEngine.resolveMobAttack(mob, target);
 
         if (result.hit) {
-            int dmg = CombatEngine.applyDamage(target, result.totalDamage, result.damageType);
-            Bukkit.broadcastMessage("§c[Combat]§r " + safeName(mob) + " §7→§r "
-                    + safeName(target) + " §c-" + dmg + " HP §7[" + result.damageType + "]");
+            // PATCH: gunakan DamageResult, handle UNCONSCIOUS
+            CombatEngine.DamageResult dmgResult = CombatEngine.applyDamage(
+                    target, result.totalDamage, result.damageType);
 
-            if (target.getHealth() <= 0) {
-                Bukkit.broadcastMessage("§c§l" + safeName(target) + " is unconscious!");
-                removeParticipant(target);
+            Bukkit.broadcastMessage("§c[Combat]§r " + safeName(mob) + " §7→§r "
+                    + safeName(target) + " §c-" + dmgResult.finalDamage + " HP §7[" + result.damageType + "]");
+
+            switch (dmgResult.outcome) {
+                case UNCONSCIOUS -> {
+                    if (deathSaveManager != null) {
+                        deathSaveManager.makeUnconscious(target);
+                    }
+                    // Player tetap di turnOrder — giliran mereka nanti prompt death save
+                }
+                case DEAD -> {
+                    Bukkit.broadcastMessage("§c§l" + safeName(target) + " has been slain!");
+                    removeParticipant(target);
+                }
+                case ALIVE -> { /* nothing to do */ }
             }
         } else {
             Bukkit.broadcastMessage("§7[Combat] " + safeName(mob) + " misses " + safeName(target) + "!");
@@ -192,6 +277,8 @@ public class TurnManager {
         Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 30L);
     }
 
+    // ==================== ACTION HANDLING ====================
+
     /**
      * Set state ke ACTION_SELECTED saat player pakai /atk atau /roll.
      */
@@ -202,6 +289,12 @@ public class TurnManager {
         }
         if (combatState != CombatState.WAITING_TURN) {
             player.sendMessage("§cBukan giliran kamu atau aksi sedang di-resolve.");
+            return;
+        }
+
+        // PATCH: unconscious player tidak bisa aksi normal
+        if (deathSaveManager != null && deathSaveManager.isUnconscious(player)) {
+            player.sendMessage("§cKamu sedang unconscious! Ketik /roll untuk death saving throw.");
             return;
         }
 
@@ -223,11 +316,23 @@ public class TurnManager {
         Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L); // 1 detik
     }
 
+    // ==================== BATTLE END — PATCHED ====================
+
     /** Cek apakah battle harus berakhir. */
     private boolean checkBattleEnd() {
-        boolean allPlayersDead = participants.values().stream()
-                .filter(e -> e instanceof Player)
-                .allMatch(e -> e.isDead());
+        // PATCH: player unconscious ≠ dead
+        long consciousPlayerCount = participants.values().stream()
+                .filter(e -> e instanceof Player && !e.isDead())
+                .filter(e -> {
+                    if (e instanceof Player p && deathSaveManager != null) {
+                        return !deathSaveManager.isUnconscious(p);
+                    }
+                    return true;
+                })
+                .count();
+
+        boolean allPlayersDead = consciousPlayerCount == 0;
+
         boolean allMobsDead = participants.values().stream()
                 .filter(e -> !(e instanceof Player))
                 .allMatch(LivingEntity::isDead);
@@ -241,6 +346,15 @@ public class TurnManager {
         for (LivingEntity e : participants.values()) {
             if (e instanceof Mob mob && !(e instanceof Player) && !e.isDead()) {
                 mob.setAware(true);
+            }
+        }
+
+        // PATCH: stabilize unconscious players saat battle selesai
+        if (deathSaveManager != null) {
+            for (LivingEntity e : participants.values()) {
+                if (e instanceof Player p && deathSaveManager.isUnconscious(p)) {
+                    deathSaveManager.stabilizeExternal(p);
+                }
             }
         }
 
@@ -264,6 +378,8 @@ public class TurnManager {
             currentTurnIndex = 0;
         }
     }
+
+    // ==================== UTILITIES ====================
 
     /** Display turn info buat player. */
     public String getCurrentTurnDisplay() {

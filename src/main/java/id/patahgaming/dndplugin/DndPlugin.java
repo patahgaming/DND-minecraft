@@ -19,6 +19,7 @@ import id.patahgaming.dndplugin.data.SpellDataStore;
 import id.patahgaming.dndplugin.data.SrdRulesStore;
 import id.patahgaming.dndplugin.data.StoryTreeStore;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
+import id.patahgaming.dndplugin.engine.combat.DeathSaveManager;
 import id.patahgaming.dndplugin.engine.combat.TurnManager;
 import id.patahgaming.dndplugin.listener.CombatListener;
 import id.patahgaming.dndplugin.listener.NpcInteractListener;
@@ -38,6 +39,7 @@ public final class DndPlugin extends JavaPlugin {
     private NarratorService narratorService;
     private NpcDialogueService npcDialogueService;
     private TurnManager turnManager;
+    private DeathSaveManager deathSaveManager;
     private SpellDataStore spellDataStore;
     private SrdRulesStore srdRulesStore;
     private PoiTickTask poiTickTask;
@@ -59,6 +61,10 @@ public final class DndPlugin extends JavaPlugin {
         this.narratorService = new NarratorService(this);
         this.npcDialogueService = new NpcDialogueService(this);
         this.turnManager = new TurnManager(this);
+
+        // Death save system
+        this.deathSaveManager = new DeathSaveManager(this);
+        this.turnManager.setDeathSaveManager(this.deathSaveManager);
 
         // Spell system (YAML-based)
         this.spellDataStore = new SpellDataStore(this);
@@ -196,6 +202,10 @@ public final class DndPlugin extends JavaPlugin {
 
     public TurnManager getTurnManager() {
         return turnManager;
+    }
+
+    public DeathSaveManager getDeathSaveManager() {
+        return deathSaveManager;
     }
 
     public SpellDataStore getSpellDataStore() {
