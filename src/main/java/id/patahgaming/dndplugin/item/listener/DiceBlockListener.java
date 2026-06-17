@@ -1,8 +1,6 @@
 package id.patahgaming.dndplugin.item.listener;
 
 import id.patahgaming.dndplugin.DndPlugin;
-import id.patahgaming.dndplugin.item.ItemSpesialManager;
-import id.patahgaming.dndplugin.item.ItemType;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.engine.dice.DiceRoller;
 import org.bukkit.*;
@@ -124,19 +122,14 @@ public class DiceBlockListener implements Listener {
             // Remove armor stand
             stand.remove();
 
-            // Trigger roll for player
+            // Trigger roll untuk player — sama seperti /roll command
             PendingRoll pending = PendingRoll.get(player);
             if (pending != null) {
-                // Resolve pending roll
-                int result = DiceRoller.parseAndRoll(pending.diceExpr);
-                player.sendMessage("§7🎲 Dadu: §f" + pending.diceExpr + " = " + result);
-                // Delegate to RollCommand flow — player still needs to /roll for full resolve
-                // But at least show the dice result
-                pending.lastRollResult = result;
-                player.sendTitle("§f§l🎲 " + result, "§7" + pending.diceExpr, 5, 40, 10);
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.6f, 1.2f);
+                // Resolve PendingRoll via RollCommand (full flow: hit/miss → damage → next turn)
+                player.sendMessage("§7🎲 Dadu memicu roll...");
+                plugin.getRollCommand().executePendingRoll(player, pending);
             } else {
-                // Free d20 roll
+                // Free d20 roll (no pending)
                 int roll = DiceRoller.roll(20);
                 player.sendTitle("§f§l🎲 " + roll, "§7Free roll (d20)", 5, 40, 10);
                 player.sendMessage("§7🎲 Dadu d20: §f" + roll);

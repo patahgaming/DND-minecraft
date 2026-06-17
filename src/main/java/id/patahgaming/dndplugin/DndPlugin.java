@@ -44,6 +44,7 @@ public final class DndPlugin extends JavaPlugin {
     private NpcDialogueService npcDialogueService;
     private TurnManager turnManager;
     private DeathSaveManager deathSaveManager;
+    private RollCommand rollCommand;
     private ItemSpesialManager itemSpesialManager;
     private SpellDataStore spellDataStore;
     private SrdRulesStore srdRulesStore;
@@ -96,9 +97,9 @@ public final class DndPlugin extends JavaPlugin {
         this.poiTickTask.runTaskTimer(this, intervalTicks, intervalTicks);
 
         // Commands
-        RollCommand rollCommand = new RollCommand(this);
-        getCommand("roll").setExecutor(rollCommand);
-        getCommand("roll").setTabCompleter(rollCommand);
+        this.rollCommand = new RollCommand(this);
+        getCommand("roll").setExecutor(this.rollCommand);
+        getCommand("roll").setTabCompleter(this.rollCommand);
         AtkCommand atkCommand = new AtkCommand(this);
         getCommand("atk").setExecutor(atkCommand);
         getCommand("atk").setTabCompleter(atkCommand);
@@ -219,6 +220,10 @@ public final class DndPlugin extends JavaPlugin {
 
     public DeathSaveManager getDeathSaveManager() {
         return deathSaveManager;
+    }
+
+    public RollCommand getRollCommand() {
+        return rollCommand;
     }
 
     public ItemSpesialManager getItemSpesialManager() {

@@ -105,7 +105,8 @@ public class RollCommand implements CommandExecutor, TabCompleter {
 
     // ==================== PENDING ROLL EXECUTION ====================
 
-    private void executePendingRoll(Player player, PendingRoll pending) {
+    /** Public — dipanggil dari DiceBlockListener (dadu fisik). */
+    public void executePendingRoll(Player player, PendingRoll pending) {
         // Roll the engine diceExpr (anti-cheat)
         int rollResult = DiceRoller.parseAndRoll(pending.diceExpr);
 
