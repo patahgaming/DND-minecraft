@@ -98,6 +98,14 @@ public class CastCommand implements CommandExecutor, TabCompleter {
             }
             if (target == null) {
                 player.sendMessage("§cTarget tidak ditemukan. Gunakan: /cast " + spellId + " <target>");
+                player.sendMessage("§7Target tersedia (pakai ID):");
+                for (var entry : tm.getParticipants().entrySet()) {
+                    if (entry.getValue() instanceof Player) continue;
+                    String id = entry.getKey().toString().substring(0, 8);
+                    String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
+                    int hp = (int) entry.getValue().getHealth();
+                    player.sendMessage("  §e" + id + " §7→ " + name + " §c[" + hp + " HP]");
+                }
                 return true;
             }
         }
@@ -188,9 +196,10 @@ public class CastCommand implements CommandExecutor, TabCompleter {
             List<String> targets = new ArrayList<>();
             for (var entry : tm.getParticipants().entrySet()) {
                 if (entry.getValue() instanceof Player) continue;
-                String name = entry.getValue().getName();
-                if (name != null && name.toLowerCase().startsWith(input)) {
-                    targets.add(name);
+                String id = entry.getKey().toString().substring(0, 8);
+                String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
+                if (id.toLowerCase().startsWith(input) || name.toLowerCase().contains(input)) {
+                    targets.add(id);  // UUID prefix — unique
                 }
             }
             return targets;

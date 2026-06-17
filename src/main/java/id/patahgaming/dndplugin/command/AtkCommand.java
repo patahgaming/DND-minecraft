@@ -82,6 +82,8 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
 
         if (target == null) {
             player.sendMessage("§cTarget tidak ditemukan. Gunakan TAB untuk lihat target.");
+            player.sendMessage("§7Target tersedia (pakai ID):");
+            listTargets(tm, player);
             return true;
         }
 
@@ -145,6 +147,16 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
         return null;
     }
 
+    private void listTargets(TurnManager tm, Player player) {
+        for (var entry : tm.getParticipants().entrySet()) {
+            if (entry.getValue() instanceof Player) continue;
+            String id = entry.getKey().toString().substring(0, 8);
+            String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
+            int hp = (int) entry.getValue().getHealth();
+            player.sendMessage("  §e" + id + " §7→ " + name + " §c[" + hp + " HP]");
+        }
+    }
+
     private LivingEntity findFirstMobTarget(TurnManager tm) {
         for (var entry : tm.getParticipants().entrySet()) {
             if (!(entry.getValue() instanceof Player)) {
@@ -169,9 +181,9 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
             for (var entry : tm.getParticipants().entrySet()) {
                 if (entry.getValue() instanceof Player) continue;
                 String id = entry.getKey().toString().substring(0, 8);
-                String name = entry.getValue().getName() != null ? entry.getValue().getName() : id;
-                if (id.toLowerCase().startsWith(input) || name.toLowerCase().startsWith(input)) {
-                    targets.add(name);
+                String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
+                if (id.toLowerCase().startsWith(input) || name.toLowerCase().contains(input)) {
+                    targets.add(id);  // UUID prefix — unique per entity
                 }
             }
             return targets;
