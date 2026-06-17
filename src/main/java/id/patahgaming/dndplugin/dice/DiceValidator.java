@@ -117,7 +117,7 @@ public class DiceValidator {
         for (int i = allDice.length - 1; i >= 0; i--) {
             int slot = 8 - (allDice.length - 1 - i); // D20→8, D12→7, D10→6, D8→5, D6→4, D4→3
             ItemStack dice = DiceItemFactory.create(allDice[i]);
-            dice.setAmount(4); // 4 pasang buat roll cepat
+            dice.setAmount(allDice[i].getSides()); // D4=×4, D6=×6, D8=×8, D10=×10, D12=×12, D20=×20
             inv.setItem(slot, dice);
         }
     }

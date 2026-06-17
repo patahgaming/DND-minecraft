@@ -47,7 +47,7 @@ public class DiceItemFactory {
         ItemStack[] pack = new ItemStack[all.length];
         for (int i = 0; i < all.length; i++) {
             pack[i] = create(all[i]);
-            pack[i].setAmount(4); // 4 pasang per tipe dadu
+            pack[i].setAmount(all[i].getSides()); // D4=×4, D6=×6, D8=×8, D10=×10, D12=×12, D20=×20
         }
         return pack;
     }
