@@ -1,0 +1,11 @@
+item_id: elder_seal
+display_name: "Elder's Seal"
+rarity: QUEST
+item_type: QUEST
+minecraft_material: PAPER
+quest_node: altar_event
+no_drop: true
+lore:
+  - "§7Segel kuno dengan lambang tetua"
+  - "§7Berpendar saat disentuh altar"
+special_effect: null

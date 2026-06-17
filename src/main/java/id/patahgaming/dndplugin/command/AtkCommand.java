@@ -106,52 +106,27 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
         // Select action
         tm.selectAction(player);
 
-        // Build diceExpr + context
-        int strMod = plugin.getPlayerDataStore().getAbilityModifier(player, "str");
-        int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");
-        int profBonus = CombatEngine.proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
-
-        int atkBonus = melee ? (strMod + profBonus) : (dexMod + profBonus);
-        String diceExpr = "d20+" + atkBonus;
-
-        int targetAC = target instanceof Player tp
-                ? CombatEngine.calculatePlayerAC(plugin, tp)
-                : CombatEngine.calculateMobAC(target);
-        String targetId = target.getUniqueId().toString().substring(0, 8);
-        String targetName = target instanceof Player p ? p.getName()
-                : (target.getName() != null ? target.getName() : target.getType().name());
-
-        // Set ATTACK PendingRoll with context
-        PendingRoll pr = new PendingRoll();
-        pr.rollType = PendingRoll.RollType.ATTACK;
-        pr.diceExpr = diceExpr;
-        pr.promptMsg = (melee ? "§7[Melee] " : "§7[Ranged] ") + player.getName()
-                + " menyerang " + targetName + "! Ketik §e/roll";
-        pr.context = new LinkedHashMap<>();
-        pr.context.put("targetId", targetId);
-        pr.context.put("targetName", targetName);
-        pr.context.put("attackType", attackType);
-        pr.context.put("targetAC", String.valueOf(targetAC));
-        pr.context.put("melee", String.valueOf(melee));
-
-        // Weapon stats dari item spesial di main hand (kalau ada)
+        // Collect weapon stats dari item spesial di main hand
+        WeaponStats wStats = null;
         ItemStack weapon = ItemSpesialManager.getWeaponInHand(player);
         if (weapon != null) {
             String wDice = ItemSpesialManager.getWeaponDamageDice(weapon);
-            int wBonus = ItemSpesialManager.getWeaponDamageBonus(weapon);
-            String wDmgType = ItemSpesialManager.getWeaponDamageType(weapon).name();
-            pr.context.put("weaponDice", wDice != null ? wDice : (melee ? "1d8" : "1d6"));
-            pr.context.put("weaponBonus", String.valueOf(wBonus));
-            pr.context.put("weaponDmgType", wDmgType);
-            pr.context.put("weaponEffect", ItemSpesialManager.getSpecialEffect(weapon).name());
+            wStats = new WeaponStats(
+                    wDice != null ? wDice : (melee ? "1d8" : "1d6"),
+                    ItemSpesialManager.getWeaponDamageBonus(weapon),
+                    ItemSpesialManager.getWeaponDamageType(weapon).name(),
+                    ItemSpesialManager.getSpecialEffect(weapon).name()
+            );
         }
 
-        PendingRoll.set(player, pr);
+        // Build & set ATTACK PendingRoll via shared builder
+        PendingRoll pr = buildAttackPendingRoll(plugin, player, target, attackType, wStats);
 
         // Prompt
+        int targetAC = Integer.parseInt(pr.context.get("targetAC"));
         player.sendMessage((melee ? "§c⚔ [Melee] " : "§c🏹 [Ranged] ")
-                + player.getName() + " menyerang " + targetName
-                + "! Ketik §e/roll §7(" + diceExpr + " vs AC " + targetAC + ")");
+                + player.getName() + " menyerang " + pr.context.get("targetName")
+                + "! Ketik §e/roll §7(" + pr.diceExpr + " vs AC " + targetAC + ")");
 
         // player now controls flow via /roll — RollCommand resolves everything
         return true;
@@ -188,6 +163,59 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
         }
         return null;
     }
+
+    /**
+     * Shared builder — dipakai AtkCommand + WeaponAttackListener.
+     * Build ATTACK PendingRoll dengan weapon stats dari item di main hand.
+     *
+     * @param weaponStats nullable — kalau null, pakai default (1d8 melee / 1d6 ranged)
+     */
+    public static PendingRoll buildAttackPendingRoll(DndPlugin plugin, Player player,
+                                                      LivingEntity target, String attackType,
+                                                      WeaponStats weaponStats) {
+        boolean melee = !attackType.equalsIgnoreCase("ranged");
+
+        int strMod = plugin.getPlayerDataStore().getAbilityModifier(player, "str");
+        int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");
+        int profBonus = CombatEngine.proficiencyBonus(plugin.getPlayerDataStore().getLevel(player));
+        int atkBonus = melee ? (strMod + profBonus) : (dexMod + profBonus);
+
+        int targetAC = target instanceof Player tp
+                ? CombatEngine.calculatePlayerAC(plugin, tp)
+                : CombatEngine.calculateMobAC(target);
+        String targetId = target.getUniqueId().toString().substring(0, 8);
+        String targetName = target instanceof Player p ? p.getName()
+                : (target.getName() != null ? target.getName() : target.getType().name());
+
+        PendingRoll pr = new PendingRoll();
+        pr.rollType = PendingRoll.RollType.ATTACK;
+        pr.diceExpr = "d20+" + atkBonus;
+        pr.context = new LinkedHashMap<>();
+        pr.context.put("targetId", targetId);
+        pr.context.put("targetName", targetName);
+        pr.context.put("attackType", attackType);
+        pr.context.put("targetAC", String.valueOf(targetAC));
+        pr.context.put("melee", String.valueOf(melee));
+
+        // Weapon stats
+        if (weaponStats != null) {
+            pr.context.put("weaponDice", weaponStats.dice);
+            pr.context.put("weaponBonus", String.valueOf(weaponStats.bonus));
+            pr.context.put("weaponDmgType", weaponStats.dmgType);
+            pr.context.put("weaponEffect", weaponStats.effect);
+        } else {
+            pr.context.put("weaponDice", melee ? "1d8" : "1d6");
+            pr.context.put("weaponBonus", "0");
+            pr.context.put("weaponDmgType", melee ? "SLASHING" : "PIERCING");
+            pr.context.put("weaponEffect", "NONE");
+        }
+
+        PendingRoll.set(player, pr);
+        return pr;
+    }
+
+    /** Weapon stats from item PDC — digunakan oleh shared builder. */
+    public record WeaponStats(String dice, int bonus, String dmgType, String effect) {}
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,

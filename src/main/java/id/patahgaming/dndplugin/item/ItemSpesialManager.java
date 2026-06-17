@@ -89,7 +89,9 @@ public class ItemSpesialManager {
     }
 
     private void loadFromJar(String jarPath) {
-        // Known template files
+        // Built-in default templates yang di-bundle dalam JAR.
+        // Template baru yang dibuat via /itemspesial create auto-discover dari disk
+        // (folder data/items/custom/) — tidak perlu ditambah ke array ini.
         String[] templates = {
                 "shortsword_iron", "longsword_iron", "shortbow_wood",
                 "longsword_plus1", "flaming_sword", "soul_reaper",

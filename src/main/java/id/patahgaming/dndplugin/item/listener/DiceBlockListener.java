@@ -77,6 +77,7 @@ public class DiceBlockListener implements Listener {
             as.setSmall(true);
             as.setMarker(true);
             as.setInvulnerable(true);
+            as.setPersistent(false); // jangan survive chunk unload / server restart
         });
 
         // Use colored glass as dice face (based on dice item material or default white)
