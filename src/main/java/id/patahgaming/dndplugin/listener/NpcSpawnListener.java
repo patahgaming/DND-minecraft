@@ -82,6 +82,17 @@ public class NpcSpawnListener implements Listener {
         if (entity instanceof Villager villager) {
             villager.setAware(true);
         }
+
+        // Semua named NPC (side + hostile) harus persistent — gak boleh despawn
+        if (entity instanceof org.bukkit.entity.LivingEntity living) {
+            living.setPersistent(true);
+            living.setRemoveWhenFarAway(false);
+            // NBT force: reflection setPersistenceRequired
+            try {
+                Object handle = living.getClass().getMethod("getHandle").invoke(living);
+                handle.getClass().getMethod("setPersistenceRequired", boolean.class).invoke(handle, true);
+            } catch (Exception ignored) {}
+        }
     }
 
     private String generateRandomName() {
