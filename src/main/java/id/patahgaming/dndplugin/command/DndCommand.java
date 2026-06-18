@@ -1,10 +1,7 @@
 package id.patahgaming.dndplugin.command;
 
 import id.patahgaming.dndplugin.DndPlugin;
-import id.patahgaming.dndplugin.data.NpcDataStore;
-import id.patahgaming.dndplugin.data.PlayerDataStore;
-import id.patahgaming.dndplugin.data.PoiStore;
-import id.patahgaming.dndplugin.data.StoryTreeStore;
+import id.patahgaming.dndplugin.model.NarratorMode;
 import id.patahgaming.dndplugin.engine.PoiTickTask;
 import id.patahgaming.dndplugin.ui.ScoreboardManager;
 import org.bukkit.Bukkit;
@@ -30,7 +27,7 @@ import java.util.List;
  */
 public class DndCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of("reload", "save", "version", "stop", "start");
+    private static final List<String> SUBCOMMANDS = List.of("reload", "save", "version", "stop", "start", "mode");
 
     private final DndPlugin plugin;
 
@@ -55,7 +52,8 @@ public class DndCommand implements CommandExecutor, TabCompleter {
             case "version" -> handleVersion(sender);
             case "stop" -> handleStopTick(sender);
             case "start" -> handleStartTick(sender);
-            default -> sender.sendMessage("§cUnknown subcommand: " + sub + ". Use: reload, save, version, stop, start");
+            case "mode" -> handleMode(sender, args);
+            default -> sender.sendMessage("§cUnknown subcommand: " + sub + ". Use: reload, save, version, stop, start, mode");
         }
 
         return true;
@@ -154,6 +152,19 @@ public class DndCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§a[DnD] Tick task started (interval: " + intervalSeconds + "s)");
     }
 
+    private void handleMode(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            NarratorMode current = plugin.getPartySessionStore().getMode();
+            sender.sendMessage("§e/dnd mode <semi|auto> §7— current: §f" + current.name().toLowerCase());
+            sender.sendMessage("§7  semi: AI narasi, pilihan story butuh input player");
+            sender.sendMessage("§7  auto: AI pilihkan next_node otomatis");
+            return;
+        }
+        NarratorMode mode = NarratorMode.fromString(args[1]);
+        plugin.getPartySessionStore().setMode(mode);
+        sender.sendMessage("§a[DnD] Narrator mode set to: §f" + mode.name().toLowerCase());
+    }
+
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
                                                  @NotNull Command command,
@@ -164,6 +175,11 @@ public class DndCommand implements CommandExecutor, TabCompleter {
             return SUBCOMMANDS.stream()
                     .filter(s -> s.startsWith(input))
                     .toList();
+        }
+        if (args.length == 2 && "mode".equalsIgnoreCase(args[0])) {
+            String input = args[1].toLowerCase();
+            return List.of("semi", "auto").stream()
+                    .filter(s -> s.startsWith(input)).toList();
         }
         return List.of();
     }

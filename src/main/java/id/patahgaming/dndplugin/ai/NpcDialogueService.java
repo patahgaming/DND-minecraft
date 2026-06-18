@@ -4,216 +4,254 @@ import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.data.NpcDataStore;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import id.patahgaming.dndplugin.listener.NpcSpawnListener;
+import id.patahgaming.dndplugin.model.ActiveDialog;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * AI NPC Dialogue — handle dialog dengan NPC penting.
+ * AI NPC Dialogue v2 — multi-turn dialog + state machine.
  *
- * AI decide real-time:
- * - Disposition: agro / teman / damai / sleight-of-hand
- * - Response berdasarkan: disposition, history per-NPC (shared party),
- *   story node, character party stats
- *
- * Semua panggilan DeepSeek dilakukan secara ASYNC.
- * Response AI dikirim via private message (whisper) ke player yang berinteraksi.
+ * IDLE → GREETING → CONVERSING (loop max 5) → RESOLVED
+ * Saat dialog aktif: intercept chat via PlayerChatListener.
  */
 public class NpcDialogueService {
 
     private final DndPlugin plugin;
+    private final Map<UUID, ActiveDialog> activeDialogs = new ConcurrentHashMap<>();
+
+    private static final String[] SIDE_GREETINGS = {
+            "Good day to you, traveler.", "Lovely weather we're having.",
+            "Watch your step out there.", "I've heard strange noises from the forest...",
+            "Welcome to these parts.", "Need any supplies? ...Oh, I'm not a merchant.",
+            "Don't mind me, just passing through.", "Stay safe on the roads.",
+            "Another adventurer, eh? Good luck.", "Nice to meet a friendly face."
+    };
 
     public NpcDialogueService(DndPlugin plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * Generate dialog NPC penting — tanpa player message (greeting, dari interact).
-     */
-    public void generateDialogue(NpcDataStore.NpcRecord npc, Player player) {
-        generateDialogue(npc, player, null);
+    // ==================== PUBLIC API ====================
+
+    public ActiveDialog getActiveDialog(Player player) {
+        return activeDialogs.get(player.getUniqueId());
     }
 
-    /**
-     * Generate dialog NPC penting dengan player message spesifik.
-     * Dipanggil dari TalkCommand saat player ketik: /talk <npc_id> <pesan>
-     *
-     * @param npc NPC record dari data store
-     * @param player Player yang ngomong
-     * @param playerMessage Pesan dari player (null kalau cuma greeting)
-     */
+    /** Start dialog — NPC greeting + first question. */
+    public void generateDialogue(NpcDataStore.NpcRecord npc, Player player) {
+        startConversation(npc, player, null);
+    }
+
     public void generateDialogue(NpcDataStore.NpcRecord npc, Player player, String playerMessage) {
+        startConversation(npc, player, playerMessage);
+    }
+
+    /** Process player chat response during active dialog. */
+    public void processPlayerResponse(Player player, String message) {
+        ActiveDialog dialog = activeDialogs.get(player.getUniqueId());
+        if (dialog == null) return;
+
+        dialog.addPartyLine(player.getName(), message);
+
+        if (dialog.isMaxedOut()) {
+            resolveDialog(player, dialog, "auto_resolved (max turns)");
+            return;
+        }
+
+        // Kirim ke AI buat next NPC response
+        NpcDataStore.NpcRecord npc = plugin.getNpcDataStore().get(dialog.npcId);
+        if (npc == null) {
+            endDialog(player, dialog);
+            return;
+        }
+
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                String systemPrompt = buildNpcSystemPrompt(npc);
-                String userPrompt = buildDialoguePrompt(npc, player, playerMessage);
+                String prompt = buildConversationPrompt(npc, player, dialog);
+                String response = plugin.getDeepSeekClient().complete(buildNpcSystemPrompt(npc, dialog), prompt);
 
-                String response = plugin.getDeepSeekClient().complete(systemPrompt, userPrompt);
-
-                // Parse disposition dari response (prefix [AGRO], [FRIENDLY], dll)
-                String disposition = extractDisposition(response);
-                String cleanResponse = cleanResponse(response);
-
-                // Update disposition di data store jika berubah
-                if (disposition != null && !disposition.equals(npc.disposition)) {
-                    plugin.getNpcDataStore().setDisposition(npc.npcId, disposition);
-                }
-
-                // Append history
-                String inputSummary = playerMessage != null
-                        ? player.getName() + ": \"" + (playerMessage.length() > 60 ? playerMessage.substring(0, 60) + "..." : playerMessage) + "\""
-                        : player.getName() + " greets you";
-                plugin.getNpcDataStore().appendHistory(npc.npcId, inputSummary);
-                String responseSummary = cleanResponse.length() > 80 ? cleanResponse.substring(0, 80) + "..." : cleanResponse;
-                plugin.getNpcDataStore().appendHistory(npc.npcId, npc.displayName + ": " + responseSummary);
-
-                // Kirim response ke player (whisper)
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage("§e[" + npc.displayName + "]§r " + cleanResponse);
+                    String dialogText = extractField(response, "DIALOG");
+                    String questionStr = extractField(response, "QUESTION");
+                    String action = extractField(response, "ACTION");
 
-                    // Jika agro, aktifkan mob AI dan target player
-                    if ("agro".equals(disposition)) {
-                        player.sendMessage("§c" + npc.displayName + " becomes hostile!");
-                        activateNpcHostility(npc.npcId, player);
+                    boolean hasQuestion = "true".equalsIgnoreCase(questionStr);
+
+                    if (!dialogText.isEmpty()) {
+                        dialog.addNpcLine(dialogText);
+                        player.sendMessage("§e[" + npc.displayName + "]§r " + dialogText);
+                    }
+
+                    if (hasQuestion) {
+                        player.sendMessage("§7(Ketik di chat untuk menjawab)");
+                    } else {
+                        // NPC sudah punya keputusan — resolve
+                        resolveDialog(player, dialog, action);
                     }
                 });
-
             } catch (Exception e) {
-                plugin.getLogger().warning("NPC dialogue failed for " + npc.npcId + ": " + e.getMessage());
+                plugin.getLogger().warning("NPC dialogue failed: " + e.getMessage());
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage("§e[" + npc.displayName + "]§r *remains silent*");
+                    player.sendMessage("§e[" + dialog.npcName + "]§r *remains silent*");
+                    endDialog(player, dialog);
                 });
             }
         });
     }
 
-    /**
-     * Generate side NPC bubble text — cached, generated sekali saat spawn.
-     * Karena side NPC tidak ada gameplay impact, pake prompt minimal.
-     */
+    /** Side NPC greeting — statis, gak pake AI. */
     public String generateSideNpcGreeting(String npcName, String biome) {
-        // Side NPC greetings tidak perlu AI — cukup random dari pool statis.
-        // Ini menghindari API call berlebihan untuk NPC flavor.
-        String[] greetings = {
-                "Good day to you, traveler.",
-                "Lovely weather we're having.",
-                "Watch your step out there.",
-                "I've heard strange noises from the forest...",
-                "Welcome to these parts.",
-                "Need any supplies? ...Oh, I'm not a merchant.",
-                "Don't mind me, just passing through.",
-                "Stay safe on the roads.",
-                "Another adventurer, eh? Good luck.",
-                "Nice to meet a friendly face."
-        };
-        int index = Math.abs(npcName.hashCode()) % greetings.length;
-        return greetings[index];
+        int index = Math.abs(npcName.hashCode()) % SIDE_GREETINGS.length;
+        return SIDE_GREETINGS[index];
     }
 
-    /**
-     * Build system prompt untuk NPC — kepribadian berdasarkan disposition + history.
-     */
-    private String buildNpcSystemPrompt(NpcDataStore.NpcRecord npc) {
+    // ==================== DIALOG STATE MACHINE ====================
+
+    private void startConversation(NpcDataStore.NpcRecord npc, Player player, String playerMessage) {
+        // Cek existing dialog
+        if (activeDialogs.containsKey(player.getUniqueId())) {
+            player.sendMessage("§7Kamu masih dalam percakapan dengan NPC lain.");
+            return;
+        }
+
+        ActiveDialog dialog = new ActiveDialog(npc.npcId, npc.displayName);
+        activeDialogs.put(player.getUniqueId(), dialog);
+
+        if (playerMessage != null) {
+            dialog.addPartyLine(player.getName(), playerMessage);
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                String prompt = buildConversationPrompt(npc, player, dialog);
+                String response = plugin.getDeepSeekClient().complete(buildNpcSystemPrompt(npc, dialog), prompt);
+
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    String dialogText = extractField(response, "DIALOG");
+                    String questionStr = extractField(response, "QUESTION");
+                    String action = extractField(response, "ACTION");
+
+                    boolean hasQuestion = "true".equalsIgnoreCase(questionStr);
+
+                    if (!dialogText.isEmpty()) {
+                        dialog.addNpcLine(dialogText);
+                        player.sendMessage("§e[" + npc.displayName + "]§r " + dialogText);
+                    }
+
+                    if (hasQuestion) {
+                        player.sendMessage("§7(Ketik di chat untuk menjawab)");
+                    } else {
+                        resolveDialog(player, dialog, action);
+                    }
+                });
+            } catch (Exception e) {
+                plugin.getLogger().warning("NPC dialogue failed: " + e.getMessage());
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.sendMessage("§e[" + npc.displayName + "]§r *remains silent*");
+                    endDialog(player, dialog);
+                });
+            }
+        });
+    }
+
+    private void resolveDialog(Player player, ActiveDialog dialog, String action) {
+        action = action != null ? action.toUpperCase() : "NEUTRAL";
+        NpcDataStore.NpcRecord npc = plugin.getNpcDataStore().get(dialog.npcId);
+
+        // Generate summary & save to history
+        if (npc != null) {
+            String summary = "Party talked with " + npc.displayName
+                    + " (" + dialog.turnCount + " turns). Outcome: " + action;
+            plugin.getNpcDataStore().appendHistory(npc.npcId, summary);
+
+            // Update disposition based on action
+            switch (action) {
+                case "FRIENDLY" -> plugin.getNpcDataStore().setDisposition(npc.npcId, "friendly");
+                case "HOSTILE" -> {
+                    plugin.getNpcDataStore().setDisposition(npc.npcId, "agro");
+                    player.sendMessage("§c" + npc.displayName + " becomes hostile!");
+                    activateNpcHostility(npc.npcId, player);
+                }
+                case "STEAL" -> player.sendMessage("§6" + npc.displayName + " mencoba mencuri itemmu!");
+            }
+
+            // Add session summary event
+            plugin.getPartySessionStore().addEvent(
+                    "Party spoke with " + npc.displayName + " (" + action.toLowerCase() + ")");
+        }
+
+        endDialog(player, dialog);
+    }
+
+    private void endDialog(Player player, ActiveDialog dialog) {
+        activeDialogs.remove(player.getUniqueId());
+        player.sendMessage("§7[Percakapan selesai]");
+    }
+
+    // ==================== PROMPT BUILDING ====================
+
+    private String buildNpcSystemPrompt(NpcDataStore.NpcRecord npc, ActiveDialog dialog) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are roleplaying as an NPC in a D&D 5e fantasy world.\n\n");
+        sb.append("Kamu adalah ").append(npc.displayName).append(".\n");
 
-        sb.append("Your name: ").append(npc.displayName).append("\n");
-        sb.append("Your current disposition toward the party: ").append(npc.disposition).append("\n\n");
-
-        // Backstory — karakter background sebelum ketemu party
+        // Backstory
         if (npc.backstory != null && !npc.backstory.isBlank()
                 && !npc.backstory.startsWith("(Add backstory")) {
-            sb.append("YOUR BACKSTORY (this is what you know about yourself):\n");
-            sb.append(npc.backstory).append("\n\n");
-            sb.append("Use this backstory to inform your responses. ");
-            sb.append("Reference details from it naturally when relevant.\n\n");
+            sb.append("BACKSTORY:\n").append(npc.backstory).append("\n\n");
         }
 
-        // SRD rules context (kalau relevan — conditions, skill checks)
-        appendRelevantSrdRules(sb);
+        sb.append("Kamu berbicara dengan party adventurer. Gunakan bahasa Indonesia + istilah fantasy Inggris.\n");
+        sb.append("Disposition kamu: ").append(npc.disposition).append(".\n");
+        sb.append("Max turns: ").append(ActiveDialog.MAX_TURNS)
+                .append(". Turn sekarang: ").append(dialog.turnCount + 1).append(".\n\n");
 
-        sb.append("Personality rules:\n");
-        sb.append("- Stay in character ALWAYS — never break the fourth wall\n");
-        sb.append("- Respond in 1-3 sentences, conversational tone\n");
-        sb.append("- Your disposition affects how you speak:\n");
-        sb.append("  • neutral: cautious but willing to talk\n");
-        sb.append("  • friendly: warm, helpful, may share information freely\n");
-        sb.append("  • agro/hostile: aggressive, threatening, may attack\n");
-        sb.append("  • damai/peaceful: calm, serene, diplomatic\n");
+        sb.append("Jika ini turn pertama: sapa party dan ajukan pertanyaan.\n");
+        sb.append("Jika sudah cukup info: tentukan ACTION.\n");
+        sb.append("Jika turn terakhir: HARUS tentukan ACTION.\n\n");
 
-        // History
-        if (!npc.history.isEmpty()) {
-            sb.append("\nPrevious interactions with this party:\n");
-            for (int i = Math.max(0, npc.history.size() - 5); i < npc.history.size(); i++) {
-                var entry = npc.history.get(i);
-                sb.append("- ").append(entry.getOrDefault("summary", "")).append("\n");
+        sb.append("Jawab dalam format EXACT:\n");
+        sb.append("DIALOG: <ucapan NPC>\n");
+        sb.append("QUESTION: <true|false>\n");
+        sb.append("ACTION: <NEUTRAL|FRIENDLY|HOSTILE|STEAL|NONE>\n");
+
+        return sb.toString();
+    }
+
+    private String buildConversationPrompt(NpcDataStore.NpcRecord npc, Player player, ActiveDialog dialog) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Party member: ").append(player.getName())
+                .append(" (Lv.").append(plugin.getPlayerDataStore().getLevel(player)).append(")\n\n");
+
+        if (!dialog.conversation.isEmpty()) {
+            sb.append("Percakapan sejauh ini:\n");
+            sb.append(dialog.buildConversationContext()).append("\n");
+        } else {
+            sb.append("Party menyapamu.\n\n");
+        }
+
+        sb.append("Respon sebagai ").append(npc.displayName).append(".");
+        return sb.toString();
+    }
+
+    // ==================== HELPERS ====================
+
+    private String extractField(String response, String field) {
+        if (response == null) return "";
+        for (String line : response.split("\n")) {
+            if (line.trim().toUpperCase().startsWith(field.toUpperCase() + ":")) {
+                return line.substring(line.indexOf(':') + 1).trim();
             }
         }
-
-        sb.append("\nIMPORTANT: Start your response with one of these tags on its own line:\n");
-        sb.append("[FRIENDLY] [NEUTRAL] [AGRO] [PEACEFUL]\n");
-        sb.append("Then write the dialogue. The tag determines your new disposition.\n");
-
-        return sb.toString();
+        return "";
     }
 
-    /**
-     * Build user prompt — party context + what the player says.
-     */
-    private String buildDialoguePrompt(NpcDataStore.NpcRecord npc, Player player, String playerMessage) {
-        StringBuilder sb = new StringBuilder();
-        PlayerDataStore store = plugin.getPlayerDataStore();
-
-        sb.append("A party member approaches you.\n\n");
-        sb.append("Speaking to you: ").append(player.getName())
-                .append(" (Lv.").append(store.getLevel(player)).append(")\n");
-
-        // Party context
-        sb.append("Other party members present: ");
-        String others = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> !p.equals(player))
-                .map(Player::getName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("none");
-        sb.append(others).append("\n");
-
-        sb.append("Current story context: ").append(store.getPartyCurrentNode()).append("\n\n");
-
-        if (playerMessage != null && !playerMessage.isBlank()) {
-            sb.append("The player says to you: \"").append(playerMessage).append("\"\n\n");
-            sb.append("Respond naturally to what the player said. Stay in character. ");
-            sb.append("If friendly, be helpful. If neutral, be cautious. If agro, be hostile.");
-        } else {
-            sb.append("The player greets you. Respond naturally based on your disposition. ");
-            sb.append("If friendly, offer useful information about the area. ");
-            sb.append("If neutral, be cautious but civil. ");
-            sb.append("If agro, be hostile and threatening.");
-        }
-
-        return sb.toString();
-    }
-
-    /**
-     * Extract disposition tag dari response AI.
-     */
-    private String extractDisposition(String response) {
-        String upper = response.toUpperCase();
-        if (upper.contains("[AGRO]") || upper.contains("[HOSTILE]")) return "agro";
-        if (upper.contains("[FRIENDLY]")) return "friendly";
-        if (upper.contains("[PEACEFUL]") || upper.contains("[DAMAI]")) return "damai";
-        if (upper.contains("[NEUTRAL]")) return "neutral";
-        return null; // tidak berubah
-    }
-
-    /**
-     * Bersihkan tag disposition dari response.
-     */
-    /**
-     * Aktifkan mob hostility — cari NPC entity di world berdasarkan npc_id PDC,
-     * enable AI, dan set target ke player.
-     */
     private void activateNpcHostility(String npcId, Player target) {
         for (Entity entity : target.getWorld().getEntities()) {
             if (entity.getPersistentDataContainer().has(
@@ -223,30 +261,9 @@ public class NpcDialogueService {
                 if (npcId.equals(foundId) && entity instanceof Mob mob) {
                     mob.setAware(true);
                     mob.setTarget(target);
-                    plugin.getLogger().info("NPC " + npcId + " is now hostile toward " + target.getName());
                     break;
                 }
             }
         }
-    }
-
-    /** Append SRD rules yang relevan dengan NPC context ke prompt. */
-    private void appendRelevantSrdRules(StringBuilder sb) {
-        if (plugin.getSrdRulesStore() == null || !plugin.getSrdRulesStore().isLoaded()) {
-            return;
-        }
-        // Lookup rules yang sering muncul di dialog NPC
-        String rules = plugin.getSrdRulesStore().searchMultiple(
-                "stealth", "perception", "persuasion", "deception", "intimidation",
-                "insight", "investigation", "survival", "grapple", "cover");
-        if (!rules.isEmpty()) {
-            sb.append("D&D 5e SRD Rules Reference (use these for skill checks):\n");
-            sb.append(rules);
-            sb.append("\n");
-        }
-    }
-
-    private String cleanResponse(String response) {
-        return response.replaceAll("(?i)\\[(FRIENDLY|NEUTRAL|AGRO|HOSTILE|PEACEFUL|DAMAI)\\]", "").trim();
     }
 }

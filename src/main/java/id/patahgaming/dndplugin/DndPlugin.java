@@ -14,6 +14,7 @@ import id.patahgaming.dndplugin.command.RollCommand;
 import id.patahgaming.dndplugin.command.SpawnNpcCommand;
 import id.patahgaming.dndplugin.command.TalkCommand;
 import id.patahgaming.dndplugin.data.NpcDataStore;
+import id.patahgaming.dndplugin.data.PartySessionStore;
 import id.patahgaming.dndplugin.data.PlayerDataStore;
 import id.patahgaming.dndplugin.data.PoiStore;
 import id.patahgaming.dndplugin.data.SpellDataStore;
@@ -30,6 +31,7 @@ import id.patahgaming.dndplugin.item.listener.WeaponAttackListener;
 import id.patahgaming.dndplugin.ui.PoiParticleDisplay;
 import id.patahgaming.dndplugin.listener.CombatListener;
 import id.patahgaming.dndplugin.listener.NpcInteractListener;
+import id.patahgaming.dndplugin.listener.PlayerChatListener;
 import id.patahgaming.dndplugin.listener.NpcSpawnListener;
 import id.patahgaming.dndplugin.listener.PlayerJoinListener;
 import id.patahgaming.dndplugin.listener.PoiDefineListener;
@@ -41,6 +43,7 @@ public final class DndPlugin extends JavaPlugin {
 
     private PlayerDataStore playerDataStore;
     private NpcDataStore npcDataStore;
+    private PartySessionStore partySessionStore;
     private StoryTreeStore storyTreeStore;
     private PoiStore poiStore;
     private DeepSeekClient deepSeekClient;
@@ -64,6 +67,7 @@ public final class DndPlugin extends JavaPlugin {
         // Data stores
         this.playerDataStore = new PlayerDataStore(this);
         this.npcDataStore = new NpcDataStore(this);
+        this.partySessionStore = new PartySessionStore(this);
         this.storyTreeStore = new StoryTreeStore(this);
         this.poiStore = new PoiStore(this);
 
@@ -98,6 +102,7 @@ public final class DndPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WeaponAttackListener(this), this);
         getServer().getPluginManager().registerEvents(new DiceBlockListener(this), this);
         getServer().getPluginManager().registerEvents(new PoiDefineListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerChatListener(this), this);
 
         // Tick loop: cek POI bbox setiap 2 detik (diambil dari config)
         int intervalSeconds = getConfig().getInt("engine.poi-tick-interval-seconds", 2);
@@ -209,6 +214,10 @@ public final class DndPlugin extends JavaPlugin {
         return npcDataStore;
     }
 
+    public PartySessionStore getPartySessionStore() {
+        return partySessionStore;
+    }
+
     public StoryTreeStore getStoryTreeStore() {
         return storyTreeStore;
     }
@@ -272,6 +281,7 @@ public final class DndPlugin extends JavaPlugin {
     public void reloadDataStores() {
         this.playerDataStore = new PlayerDataStore(this);
         this.npcDataStore = new NpcDataStore(this);
+        this.partySessionStore = new PartySessionStore(this);
         this.storyTreeStore = new StoryTreeStore(this);
         this.poiStore = new PoiStore(this);
         if (this.itemSpesialManager != null) {
