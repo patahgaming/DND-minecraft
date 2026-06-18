@@ -11,10 +11,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.EulerAngle;
 
@@ -38,15 +39,19 @@ public class DiceBlockListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onDicePlace(BlockPlaceEvent event) {
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onDicePlace(PlayerInteractEvent event) {
+        // Hanya right-click block
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
         Player player = event.getPlayer();
-        ItemStack item = event.getItemInHand();
+        ItemStack item = event.getItem();
+        if (item == null) return;
 
         // Cek item ada PDC dnd:item_type = DICE
         if (!isDiceItem(item)) return;
 
-        // Cancel block place vanilla — jangan taruh wool beneran
+        // Cancel interaction — jangan taruh wool beneran (Adventure mode compat)
         event.setCancelled(true);
 
         // CLONE dulu — getItemInHand() return snapshot di Paper modern,
@@ -60,7 +65,7 @@ public class DiceBlockListener implements Listener {
         }
 
         // Play dice animation dengan SNAPSHOT (masih punya amount + PDC valid)
-        Location diceLoc = event.getBlock().getLocation().add(0.5, 0, 0.5);
+        Location diceLoc = event.getClickedBlock().getLocation().add(0.5, 0, 0.5);
         playDiceAnimation(player, diceLoc, diceSnapshot);
     }
 
