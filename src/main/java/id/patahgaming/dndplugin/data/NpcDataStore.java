@@ -56,7 +56,12 @@ public class NpcDataStore {
                 if (data == null) continue;
 
                 NpcRecord record = new NpcRecord();
-                record.npcId = String.valueOf(data.get("npc_id"));
+                Object idRaw = data.get("npc_id");
+                if (idRaw == null) {
+                    plugin.getLogger().warning("Skipping NPC file with missing npc_id: " + file.getName());
+                    continue;
+                }
+                record.npcId = String.valueOf(idRaw);
                 record.displayName = String.valueOf(data.getOrDefault("display_name", record.npcId));
                 record.disposition = String.valueOf(data.getOrDefault("disposition", "neutral"));
                 Object node = data.get("story_node");
@@ -156,5 +161,14 @@ public class NpcDataStore {
         for (String npcId : records.keySet()) {
             save(npcId);
         }
+    }
+
+    /** Hapus NPC record + YAML file dari disk. */
+    public boolean remove(String npcId) {
+        NpcRecord removed = records.remove(npcId);
+        if (removed == null) return false;
+        File file = new File(npcsFolder, npcId + ".yml");
+        if (file.exists()) file.delete();
+        return true;
     }
 }

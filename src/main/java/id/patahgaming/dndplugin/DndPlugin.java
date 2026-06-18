@@ -7,6 +7,7 @@ import id.patahgaming.dndplugin.command.AtkCommand;
 import id.patahgaming.dndplugin.command.BattleCommand;
 import id.patahgaming.dndplugin.command.CastCommand;
 import id.patahgaming.dndplugin.command.CharacterCommand;
+import id.patahgaming.dndplugin.command.DeleteNpcCommand;
 import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
@@ -120,6 +121,9 @@ public final class DndPlugin extends JavaPlugin {
         NewNpcCommand newNpcCommand = new NewNpcCommand(this);
         getCommand("newnpc").setExecutor(newNpcCommand);
         getCommand("newnpc").setTabCompleter(newNpcCommand);
+        DeleteNpcCommand deleteNpcCommand = new DeleteNpcCommand(this);
+        getCommand("deletenpc").setExecutor(deleteNpcCommand);
+        getCommand("deletenpc").setTabCompleter(deleteNpcCommand);
         DndCommand dndCommand = new DndCommand(this);
         getCommand("dnd").setExecutor(dndCommand);
         getCommand("dnd").setTabCompleter(dndCommand);

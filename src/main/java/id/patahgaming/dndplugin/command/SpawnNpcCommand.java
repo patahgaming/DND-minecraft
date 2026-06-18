@@ -98,8 +98,11 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
         }
 
         // Hostile mob NPCs: disable auto-attack AI — cuma nyerang kalau narator perintah (agro)
-        if (entity instanceof org.bukkit.entity.Mob mob && !(entity instanceof Villager)) {
-            mob.setAware(false); // freeze sampai disposition jadi agro
+        // Kecualikan Villager & WanderingTrader (peaceful, harus bisa jalan)
+        if (entity instanceof org.bukkit.entity.Mob mob
+                && !(entity instanceof Villager)
+                && !(entity instanceof org.bukkit.entity.WanderingTrader)) {
+            mob.setAware(false);
         }
 
         player.sendMessage("§aSpawned: §6§l" + record.displayName + " §7(id: " + record.npcId + ", type: " + entityType + ")");

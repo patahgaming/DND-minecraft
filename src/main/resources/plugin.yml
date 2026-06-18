@@ -24,6 +24,9 @@ commands:
   newnpc:
     description: Buat NPC penting baru (semua mob type) + simpan template YAML
     usage: /newnpc <npc_id> <display_name> [entity_type] [spawn]
+  deletenpc:
+    description: Hapus NPC (remove data + kill entity)
+    usage: /deletenpc <npc_id>
   battle:
     description: Battle commands (start, flee, status)
     usage: /battle <start|flee|status>

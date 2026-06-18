@@ -174,7 +174,10 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
         }
 
         // Hostile mob NPCs: jangan auto-attack — cuma nyerang pas disposition jadi agro
-        if (entity instanceof org.bukkit.entity.Mob mob && !(entity instanceof Villager)) {
+        // Kecualikan Villager & WanderingTrader (peaceful)
+        if (entity instanceof org.bukkit.entity.Mob mob
+                && !(entity instanceof Villager)
+                && !(entity instanceof org.bukkit.entity.WanderingTrader)) {
             mob.setAware(false);
         }
 

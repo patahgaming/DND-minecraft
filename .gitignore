@@ -34,3 +34,4 @@ server/
 
 # Plugin runtime data (generated at runtime)
 # (keep template YAML in src/main/resources/data/)
+new world/
