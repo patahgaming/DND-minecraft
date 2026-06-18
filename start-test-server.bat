@@ -6,7 +6,7 @@ REM Java 25 Optimized
 REM ============================================
 
 set JAVA="java"
-set JVM_MEM=-Xmx2G -Xms1G
+set JVM_MEM=-Xmx4G -Xms1G
 set JVM_GC=-XX:+UseZGC -XX:+ZGenerational
 
 REM Paper Performance Flags

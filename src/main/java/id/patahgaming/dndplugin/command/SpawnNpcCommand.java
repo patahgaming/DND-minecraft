@@ -78,6 +78,10 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
         org.bukkit.entity.LivingEntity entity = (org.bukkit.entity.LivingEntity)
                 world.spawnEntity(loc, entityType);
 
+        // Jangan despawn saat chunk unload
+        entity.setPersistent(true);
+        entity.setRemoveWhenFarAway(false);
+
         // Set PDC tags
         entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcIdKey(), PersistentDataType.STRING, record.npcId);
