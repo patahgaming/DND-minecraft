@@ -160,6 +160,11 @@ public class NewNpcCommand implements CommandExecutor, TabCompleter {
         // Jangan despawn saat chunk unload
         entity.setPersistent(true);
         entity.setRemoveWhenFarAway(false);
+        // NBT PersistenceRequired via reflection (bypass API kalau gak ngaruh)
+        try {
+            Object handle = entity.getClass().getMethod("getHandle").invoke(entity);
+            handle.getClass().getMethod("setPersistenceRequired", boolean.class).invoke(handle, true);
+        } catch (Exception ignored) {}
 
         entity.getPersistentDataContainer().set(
                 NpcSpawnListener.npcIdKey(), PersistentDataType.STRING, record.npcId);

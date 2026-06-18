@@ -78,9 +78,18 @@ public class SpawnNpcCommand implements CommandExecutor, TabCompleter {
         org.bukkit.entity.LivingEntity entity = (org.bukkit.entity.LivingEntity)
                 world.spawnEntity(loc, entityType);
 
-        // Jangan despawn saat chunk unload
+        // PERSISTENCE — hostile mobs harus di-force ga bisa despawn
         entity.setPersistent(true);
         entity.setRemoveWhenFarAway(false);
+        // NBT PersistenceRequired via reflection (bypass API kalau gak ngaruh)
+        try {
+            Object handle = entity.getClass().getMethod("getHandle").invoke(entity);
+            handle.getClass().getMethod("setPersistenceRequired", boolean.class).invoke(handle, true);
+        } catch (Exception ignored) {}
+
+        // Set custom name IMMEDIATELY (named mobs don't despawn)
+        entity.customName(net.kyori.adventure.text.Component.text(
+                "§6§l" + record.displayName));
 
         // Set PDC tags
         entity.getPersistentDataContainer().set(
