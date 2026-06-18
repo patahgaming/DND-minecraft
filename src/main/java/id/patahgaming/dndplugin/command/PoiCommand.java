@@ -40,7 +40,7 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
     private static final NamespacedKey KEY_CORNER1 = new NamespacedKey("dndplugin", "poi_corner1");
     private static final NamespacedKey KEY_CORNER2 = new NamespacedKey("dndplugin", "poi_corner2");
 
-    private static final List<String> SUBCOMMANDS = List.of("define", "confirm", "cancel", "list", "info", "tree");
+    private static final List<String> SUBCOMMANDS = List.of("define", "confirm", "cancel", "list", "info", "tree", "showall");
 
     public PoiCommand(DndPlugin plugin) {
         this.plugin = plugin;
@@ -66,6 +66,7 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
             case "list" -> handleList(player, args);
             case "info" -> handleInfo(player, args);
             case "tree" -> handleTree(player);
+            case "showall" -> handleShowAll(player);
             default -> {
                 player.sendMessage("§cUnknown: " + args[0] + ". Use: define, confirm, cancel, list, info, tree");
                 yield true;
@@ -295,6 +296,22 @@ public class PoiCommand implements CommandExecutor, TabCompleter {
             String childPrefix = prefix + (last ? "  §7└─ " : "  §7├─ ");
             printTree(player, children.get(i), childPrefix);
         }
+    }
+
+    // ==================== SHOWALL ====================
+
+    private boolean handleShowAll(Player player) {
+        var pois = plugin.getPoiStore().getAll();
+        if (pois.isEmpty()) {
+            player.sendMessage("§7Belum ada POI.");
+            return true;
+        }
+
+        player.sendMessage("§eMenampilkan outline §f" + pois.size() + " §ePOI selama 10 detik...");
+        for (var poi : pois) {
+            plugin.getPoiParticleDisplay().showExistingBorder(player, poi);
+        }
+        return true;
     }
 
     // ==================== CLEANUP ====================
