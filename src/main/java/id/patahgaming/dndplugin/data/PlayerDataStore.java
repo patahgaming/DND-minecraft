@@ -134,9 +134,9 @@ public class PlayerDataStore {
         pdc.set(KEY_WIS, PersistentDataType.INTEGER, scores.getOrDefault("wis", 10));
         pdc.set(KEY_CHA, PersistentDataType.INTEGER, scores.getOrDefault("cha", 10));
 
-        // Set max HP = class base + CON modifier
+        // Set max HP = (class base + CON modifier) × HP_MULTIPLIER (first-campaign buff)
         int conMod = getAbilityModifier(player, "con");
-        int maxHP = charClass.getBaseHP() + conMod;
+        int maxHP = (int) ((charClass.getBaseHP() + conMod) * id.patahgaming.dndplugin.creation.CharacterCreationManager.HP_MULTIPLIER);
         player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(maxHP);
         player.setHealth(maxHP);
 

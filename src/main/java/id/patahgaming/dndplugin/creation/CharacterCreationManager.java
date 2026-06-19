@@ -24,6 +24,9 @@ public class CharacterCreationManager {
     private static final NamespacedKey KEY_CHAR_CLASS = new NamespacedKey("dndplugin", "char_class");
     private static final NamespacedKey KEY_CHAR_RACE = new NamespacedKey("dndplugin", "char_race");
 
+    /** First-campaign HP multiplier — all player HP ×3 agar tidak mati 1-hit. */
+    public static final double HP_MULTIPLIER = 3.0;
+
     private final DndPlugin plugin;
 
     // Race list: index 1-14 → race_id
@@ -144,10 +147,10 @@ public class CharacterCreationManager {
 
         // TODO: Apply race bonuses from race YAML
 
-        // HP
+        // HP — dikali HP_MULTIPLIER untuk first-campaign survivability
         int baseHp = getClassBaseHp(className);
         int conMod = (con - 10) / 2;
-        int maxHp = Math.max(1, baseHp + conMod);
+        int maxHp = (int) Math.max(1, (baseHp + conMod) * HP_MULTIPLIER);
 
         // Save to PDC
         var pdc = player.getPersistentDataContainer();
