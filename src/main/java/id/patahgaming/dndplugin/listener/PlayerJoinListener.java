@@ -61,6 +61,10 @@ public class PlayerJoinListener implements Listener {
 
         // Arrange dadu ke hotbar paling kanan (slot 3-8) — tiap join
         DiceValidator.arrangeDiceToHotbar(player);
+
+        // Tampilkan character name + HP bar di atas player (5 tick delay — tunggu PDC ready)
+        Bukkit.getScheduler().runTaskLater(plugin,
+                () -> CombatListener.updateHpBar(player), 5L);
     }
 
     @EventHandler

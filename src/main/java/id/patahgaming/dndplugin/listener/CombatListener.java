@@ -209,11 +209,18 @@ public class CombatListener implements Listener {
 
     /**
      * Get the BASE name of an entity WITHOUT any HP bar.
-     * NPC name from PDC (with color), or vanilla name for untagged mobs.
+     * NPC name from PDC (with color), player character name from PDC,
+     * or vanilla name for untagged mobs.
      */
     private static String getBaseName(LivingEntity entity) {
         if (entity instanceof Player player) {
-            return player.getName();
+            // Gunakan D&D character name, fallback ke Minecraft username
+            var pdc = player.getPersistentDataContainer();
+            String charName = pdc.get(new NamespacedKey("dndplugin", "char_name"), PersistentDataType.STRING);
+            if (charName != null && !charName.isBlank()) {
+                return "§b§l" + charName;
+            }
+            return "§7" + player.getName();
         }
 
         // Check PDC for NPC tags

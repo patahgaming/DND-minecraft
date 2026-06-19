@@ -231,6 +231,12 @@ public class PlayerDataStore {
         player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(20);
         player.setHealth(20);
 
+        // Reset name tag ke Minecraft username
+        player.setDisplayName(player.getName());
+        player.setPlayerListName(player.getName());
+        player.customName(null);
+        player.setCustomNameVisible(false);
+
         // Hapus YAML file
         UUID uuid = player.getUniqueId();
         File file = new File(playersFolder, uuid + ".yml");
