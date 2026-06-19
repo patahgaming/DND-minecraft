@@ -45,27 +45,28 @@ public class CharacterCreationManager {
         this.plugin = plugin;
     }
 
-    /** Give Buku 1 (race + class) to player. */
+    /** Give Buku 1 (race + class) to player.
+     * Pages must stay under 14 lines (Minecraft Book & Quill limit). */
     public void giveStageOneBook(Player player) {
         ItemStack book = new ItemStack(Material.WRITABLE_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
         if (meta == null) return;
 
-        // Page 1: Race selection
-        StringBuilder pg1 = new StringBuilder("=== Petualang Baru ===\n\nPilih Race:\n");
-        for (int i = 0; i < RACES.length; i++) {
-            pg1.append(i + 1).append(". ").append(formatName(RACES[i])).append("\n");
-        }
-        pg1.append("\nTulis angka pilihanmu:\n[tulis di sini]");
-        meta.addPage(pg1.toString());
+        // Page 1: Race selection — 3-column grid, 6 lines total
+        // "Pilih Race:\n" + 3 grid lines + "\n" + "Tulis angka (1-9):"
+        meta.addPage("Pilih Race (1-9):\n"
+                + "1.Human   2.Elf    3.Dwarf\n"
+                + "4.Halfling 5.H-Orc 6.Tiefling\n"
+                + "7.Dragon  8.Gnome  9.H-Elf\n"
+                + "\nTulis angka pilihan:");
 
-        // Page 2: Class selection with info
-        StringBuilder pg2 = new StringBuilder("=== Pilih Class ===\n\n");
-        for (int i = 0; i < CLASSES.length; i++) {
-            pg2.append(i + 1).append(". ").append(formatName(CLASSES[i])).append("\n");
-        }
-        pg2.append("\nTulis angka pilihanmu:\n[tulis di sini]");
-        meta.addPage(pg2.toString());
+        // Page 2: Class selection — 4×3 grid, 7 lines total
+        meta.addPage("Pilih Class (1-12):\n"
+                + "1.Fighter 2.Rogue  3.Wizard\n"
+                + "4.Cleric  5.Paladin 6.Barbarian\n"
+                + "7.Monk    8.Druid  9.Sorcerer\n"
+                + "10.Warlock 11.Ranger 12.Bard\n"
+                + "\nTulis angka pilihan:");
 
         meta.setDisplayName("§6Buku Karakter §8- Tahap 1");
         meta.getPersistentDataContainer().set(KEY_BOOK_STAGE, PersistentDataType.INTEGER, 1);
@@ -74,38 +75,39 @@ public class CharacterCreationManager {
         giveOrDrop(player, book);
     }
 
-    /** Give Buku 2 (skills + ability scores) after stage 1 is parsed. */
+    /** Give Buku 2 (skills + ability scores) after stage 1 is parsed.
+     * Pages must stay under 14 lines (Minecraft Book & Quill limit). */
     public void giveStageTwoBook(Player player, int classIdx) {
         ItemStack book = new ItemStack(Material.WRITABLE_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
         if (meta == null) return;
 
-        // Page 1: Skills (contextual per class)
-        StringBuilder pg1 = new StringBuilder("=== Skill Proficiency ===\n\n");
-        pg1.append("Pilih 2 skill dari:\n");
-        pg1.append("1. Athletics\n2. Acrobatics\n3. Stealth\n4. Perception\n");
-        pg1.append("5. Investigation\n6. Insight\n7. Persuasion\n8. Deception\n");
-        pg1.append("9. Intimidation\n10. Survival\n\n");
-        pg1.append("Tulis 2 angka, pisah koma:\n[tulis di sini]");
-        meta.addPage(pg1.toString());
+        // Page 1: Skills — 2-column, 8 lines total
+        meta.addPage("Pilih 2 Skill (pisah koma):\n"
+                + "1.Athletic  2.Acrobat\n"
+                + "3.Stealth   4.Percept\n"
+                + "5.Invest    6.Insight\n"
+                + "7.Persuade  8.Decept\n"
+                + "9.Intimid   10.Survival\n"
+                + "\nTulis 2 angka (contoh: 3,4):");
 
-        // Page 2: Background
-        StringBuilder pg2 = new StringBuilder("=== Background ===\n\n");
-        for (int i = 0; i < BACKGROUNDS.length; i++) {
-            pg2.append(i + 1).append(". ").append(formatName(BACKGROUNDS[i])).append("\n");
-        }
-        pg2.append("\nTulis angka pilihanmu:\n[tulis di sini]");
-        meta.addPage(pg2.toString());
+        // Page 2: Background — 2-column, 7 lines total
+        meta.addPage("Pilih Background (1-8):\n"
+                + "1.Acolyte   2.Criminal\n"
+                + "3.FolkHero  4.Noble\n"
+                + "5.Sage      6.Soldier\n"
+                + "7.Outlander 8.Charlatan\n"
+                + "\nTulis angka pilihan:");
 
-        // Page 3: Ability Scores
-        meta.addPage("=== Ability Scores ===\n\n" +
-                "1. Standard Array\n   (15,14,13,12,10,8)\n\n" +
-                "2. Roll (4d6 drop lowest)\n\n" +
-                "Tulis angka pilihanmu:\n[tulis di sini]\n\n" +
-                "Jika Standard Array,\n" +
-                "urutkan ke (STR,DEX,CON,INT,WIS,CHA):\n" +
-                "Contoh: 15,10,13,8,12,14\n\n" +
-                "Tulis urutanmu:\n[tulis di sini]");
+        // Page 3: Ability Scores — compact, 7 lines total
+        // Note: avoid bare 6-number sequences in pre-filled text (parser false-positive)
+        meta.addPage("Ability Scores:\n"
+                + "1.Standard Array\n"
+                + "2.Roll 4d6 (drop lowest)\n"
+                + "\nPilih 1 atau 2:\n"
+                + "\nJika Std Array, tulis:\n"
+                + "STR,DEX,CON,INT,WIS,CHA\n"
+                + "Contoh: 15,10,13,8,12,14");
 
         meta.setDisplayName("§6Buku Karakter §8- Tahap 2");
         meta.getPersistentDataContainer().set(KEY_BOOK_STAGE, PersistentDataType.INTEGER, 2);

@@ -98,17 +98,29 @@ public class BookSignListener implements Listener {
         // Parse ability method + distribution (page 2)
         String page2 = pages.get(2);
         String[] lines = page2.split("\n");
-        int scoreMethod = 1;
+        int scoreMethod = 0; // 0=undetected
         int[] scoreDist = null;
         for (String line : lines) {
+            // split(":")[0] strips label prefixes like "Contoh:", "Cth:", etc.
+            // Then look for 6 comma-separated integers (player's array assignment)
             String[] parts = line.split(":")[0].split(",");
             if (parts.length == 6) {
-                try {
-                    scoreDist = new int[6];
-                    for (int j = 0; j < 6; j++) scoreDist[j] = Integer.parseInt(parts[j].trim());
+                int[] temp = new int[6];
+                boolean allOk = true;
+                for (int j = 0; j < 6; j++) {
+                    try {
+                        temp[j] = Integer.parseInt(parts[j].trim());
+                    } catch (NumberFormatException e) {
+                        allOk = false;
+                        break;
+                    }
+                }
+                if (allOk) {
+                    scoreDist = temp;
                     scoreMethod = 1;
-                } catch (NumberFormatException ignored) {}
-                break;
+                    break;
+                }
+                // If not allOk, array wasn't valid → keep looking
             }
         }
         if (scoreDist == null) scoreMethod = 2; // roll
@@ -141,24 +153,43 @@ public class BookSignListener implements Listener {
                 + formatName(raceId) + " " + formatName(className) + ")");
     }
 
+    /**
+     * Extract last integer from page text.
+     * Handles: standalone "3", trailing "Tulis angka:3", or any line ending with a number.
+     */
     private int extractLastNumber(String text) {
         if (text == null) return -1;
         String[] lines = text.split("\n");
+        // Scan from the end — player's answer should be near the bottom
         for (int i = lines.length - 1; i >= 0; i--) {
             String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            // Try standalone number first
             if (line.matches("\\d+")) return Integer.parseInt(line);
+            // Try trailing number: "Pilih Race:3" → 3, "Tulis angka (1-9):5" → 5
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*$").matcher(line);
+            if (m.find()) return Integer.parseInt(m.group(1));
         }
         return -1;
     }
 
+    /**
+     * Extract two comma-separated integers from page text.
+     * Handles: standalone "3,4", trailing "skill:3,4", or "3, 4" with spaces.
+     */
     private int[] extractTwoNumbers(String text) {
         if (text == null) return null;
-        for (String line : text.split("\n")) {
-            String[] parts = line.trim().split(",");
-            if (parts.length == 2) {
+        // Scan from end — player's answer is near the bottom
+        String[] lines = text.split("\n");
+        for (int i = lines.length - 1; i >= 0; i--) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            // Match: 2 comma-separated numbers anywhere in the line
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*,\\s*(\\d+)").matcher(line);
+            if (m.find()) {
                 try {
-                    return new int[]{Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim())};
-                } catch (NumberFormatException e) { return null; }
+                    return new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+                } catch (NumberFormatException ignored) {}
             }
         }
         return null;
