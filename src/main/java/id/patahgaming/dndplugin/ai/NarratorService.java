@@ -134,7 +134,7 @@ public class NarratorService {
                             && !"NONE".equalsIgnoreCase(advance)) {
                         var node = plugin.getStoryTreeStore().get(advance);
                         if (node != null) {
-                            plugin.getPlayerDataStore().setCurrentNode(advance);
+                            plugin.getPlayerDataStore().setPartyCurrentNode(advance);
                             plugin.getPartySessionStore().setCurrentNode(advance);
                             plugin.getLogger().info("[Narrator] Auto-advanced: " + advance);
                         }
@@ -170,9 +170,14 @@ public class NarratorService {
 
                 String response = plugin.getDeepSeekClient().complete(buildSystemPrompt(), sb.toString());
 
+                // Parse NARASI dari batch response
+                String batchNarasi = extractField(response, "NARASI");
+                if (batchNarasi.isEmpty()) batchNarasi = response;
+                final String finalBatchNarasi = batchNarasi;
+
                 // Broadcast to PARTY (default for batches)
                 Bukkit.getScheduler().runTask(plugin, () ->
-                        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("§6[Narrator]§r " + response)));
+                        Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("§6[Narrator]§r " + finalBatchNarasi)));
 
             } catch (Exception e) {
                 // Fallback: kirim per event
@@ -197,21 +202,24 @@ public class NarratorService {
                 (Sneak Attack, Spell Slot, Saving Throw, dll).
 
                 Aturan narasi:
-                - Maksimal 3 kalimat untuk event biasa
-                - Maksimal 6 kalimat untuk momen penting (boss, plot twist)
+                - Untuk event biasa: 1-2 kalimat
+                - Untuk momen penting (boss, plot twist): hingga 4 kalimat
                 - JANGAN sebut koordinat atau istilah Minecraft (block, chunk)
                 - Sebut pemain dengan nama karakter mereka, bukan username
                 - Stay in character — jangan break the fourth wall
+                - ANGKA yang diberikan bersifat FINAL — jangan diubah atau dibulatkan
 
                 %s
 
-                Selalu jawab dalam format EXACT:
-                NARASI: <teks narasi %d-%d kalimat>
+                Jawab dalam format:
+                NARASI: <teks narasi>
                 ADVANCE: <%s>
                 """.formatted(
-                    "Ikuti narrative_template yang diberikan, tambahkan detail kontekstual (waktu, cuaca, posisi).",
-                    1, 3,
-                    isAuto ? "next_node_id dari daftar choices, atau NONE" : "NONE"
+                    isAuto
+                        ? "Jika diberikan narrative_template, ikuti alurnya."
+                            + " Jika TIDAK ada template, narasikan secara bebas berdasarkan konteks."
+                        : "Narasikan berdasarkan konteks yang diberikan.",
+                    isAuto ? "next_node_id, atau NONE" : "NONE"
                 );
     }
 
@@ -237,6 +245,8 @@ public class NarratorService {
             case NPC_DIALOG_END -> templateNpcDialogEnd(ctx);
             case NPC_DIALOG_AGRO -> templateNpcDialogAgro(ctx);
             case CHARACTER_LEVEL_UP -> templateLevelUp(ctx);
+            case POI_ON_RAIL -> templateOnRail(ctx);
+            case POI_OFF_RAIL -> templateOffRail(ctx);
             default -> templateGeneric(ctx);
         };
     }
@@ -368,12 +378,19 @@ public class NarratorService {
     }
 
     private String templateNpcDialogStart(NarratorContext ctx) {
-        String npc = ctx.extraData.getOrDefault("npcName", ctx.target);
-        return "";
+        String npc = ctx.extraData.getOrDefault("npcName", ctx.target != null ? ctx.target : "someone");
+        return String.format(
+                "%s begins a conversation with %s. Narrate this moment briefly. %s",
+                ctx.subject, npc,
+                setFallback(ctx, ctx.subject + " approaches " + npc + "."));
     }
 
     private String templateNpcDialogEnd(NarratorContext ctx) {
-        return "";
+        String npc = ctx.extraData.getOrDefault("npcName", ctx.target != null ? ctx.target : "someone");
+        return String.format(
+                "The conversation between %s and %s has ended. Narrate the departure. %s",
+                ctx.subject, npc,
+                setFallback(ctx, ctx.subject + " finishes talking with " + npc + "."));
     }
 
     private String templateNpcDialogAgro(NarratorContext ctx) {
@@ -390,6 +407,24 @@ public class NarratorService {
                 "%s has leveled up to level %s! Narrate in 1-2 sentences of personal growth.%s",
                 ctx.subject, lvl,
                 setFallback(ctx, ctx.subject + " reaches level " + lvl + "!"));
+    }
+
+    private String templateOnRail(NarratorContext ctx) {
+        String narrative = ctx.extraData.getOrDefault("narrative", "");
+        String currentNode = ctx.extraData.getOrDefault("currentNode", "?");
+        String events = ctx.extraData.getOrDefault("recent_events", "");
+        return String.format(
+                "Story node: %s. Template: %s. Recent events: %s. %s",
+                currentNode, narrative, events,
+                setFallback(ctx, narrative.isEmpty() ? "Party arrives at " + currentNode + "." : narrative));
+    }
+
+    private String templateOffRail(NarratorContext ctx) {
+        String events = ctx.extraData.getOrDefault("recent_events", "");
+        return String.format(
+                "Party is exploring freely (no active story node). Recent events: %s. %s",
+                events,
+                setFallback(ctx, "The party continues their journey."));
     }
 
     private String templateGeneric(NarratorContext ctx) {
@@ -411,15 +446,29 @@ public class NarratorService {
         return "";
     }
 
-    /** Extract field value from "FIELD: value" format. */
+    /** Extract field value from "FIELD: value" format. Handles multi-line values. */
     private String extractField(String response, String field) {
         if (response == null) return "";
-        for (String line : response.split("\n")) {
-            if (line.trim().toUpperCase().startsWith(field.toUpperCase() + ":")) {
-                return line.substring(line.indexOf(':') + 1).trim();
+        String[] lines = response.split("\n");
+        StringBuilder value = new StringBuilder();
+        boolean found = false;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.toUpperCase().startsWith(field.toUpperCase() + ":")) {
+                value.append(line.substring(line.indexOf(':') + 1).trim());
+                found = true;
+                // Collect continuation lines until next FIELD: or end
+                for (int j = i + 1; j < lines.length; j++) {
+                    String next = lines[j].trim();
+                    if (next.isEmpty()) continue;
+                    // Stop at next FIELD: marker
+                    if (next.matches("^[A-Z_]+:.*")) break;
+                    value.append(" ").append(next.trim());
+                }
+                break;
             }
         }
-        return "";
+        return found ? value.toString().trim() : "";
     }
 
     private String describeEvent(NarratorContext ctx) {
