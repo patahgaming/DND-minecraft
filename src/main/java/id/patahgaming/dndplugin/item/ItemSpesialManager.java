@@ -40,6 +40,7 @@ public class ItemSpesialManager {
     public static final NamespacedKey KEY_ATTACK_TYPE = new NamespacedKey("dndplugin", "attack_type");
     public static final NamespacedKey KEY_SPECIAL_EFFECT = new NamespacedKey("dndplugin", "special_effect");
     public static final NamespacedKey KEY_DICE_TYPE = new NamespacedKey("dndplugin", "dice_type");
+    public static final NamespacedKey KEY_AC_BONUS = new NamespacedKey("dndplugin", "ac_bonus");
 
     private final DndPlugin plugin;
     private final Map<String, YamlConfiguration> itemCache = new LinkedHashMap<>();
@@ -236,6 +237,20 @@ public class ItemSpesialManager {
             }
         } else if (type == ItemType.DICE) {
             pdc.set(KEY_DICE_TYPE, PersistentDataType.STRING, yaml.getString("dice_type", "D20"));
+        }
+
+        // AC bonus for ARMOR and ACCESSORY
+        if (type == ItemType.ARMOR || type == ItemType.ACCESSORY) {
+            int acBonus = yaml.getInt("ac_bonus", type == ItemType.ARMOR ? 1 : 0);
+            pdc.set(KEY_AC_BONUS, PersistentDataType.INTEGER, acBonus);
+        }
+
+        // Heal dice for CONSUMABLE (needed for right-click use)
+        if (type == ItemType.CONSUMABLE) {
+            String healDice = yaml.getString("heal_dice", "");
+            if (!healDice.isEmpty()) {
+                pdc.set(new NamespacedKey("dndplugin", "heal_dice"), PersistentDataType.STRING, healDice);
+            }
         }
 
         item.setItemMeta(meta);

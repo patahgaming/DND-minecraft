@@ -7,7 +7,7 @@
 
     <groupId>id.patahgaming</groupId>
     <artifactId>dndplugin</artifactId>
-    <version>1.0.0.69</version>
+    <version>1.0.0.70</version>
     <packaging>jar</packaging>
 
     <name>DnDPlugin</name>

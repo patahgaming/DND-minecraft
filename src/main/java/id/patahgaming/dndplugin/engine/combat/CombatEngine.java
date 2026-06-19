@@ -60,11 +60,43 @@ public class CombatEngine {
 
     // --- AC Calculation ---
 
-    /** Player AC = 10 + DEX modifier (+ armor bonus later) */
+    /** Player AC = 10 + DEX modifier + armor bonus from equipped DND armor + shield. */
     public static int calculatePlayerAC(DndPlugin plugin, Player player) {
         int dexMod = plugin.getPlayerDataStore().getAbilityModifier(player, "dex");
-        // TODO: armor bonus from equipment
-        return 10 + dexMod;
+        int armorBonus = getArmorBonus(player);
+        return 10 + dexMod + armorBonus;
+    }
+
+    /**
+     * Scan player's armor slots + offhand for DND special armor items.
+     * Sums ac_bonus from all equipped armor pieces.
+     */
+    private static int getArmorBonus(Player player) {
+        int total = 0;
+        // Check all 4 armor slots + offhand (shield)
+        org.bukkit.inventory.ItemStack[] armor = player.getInventory().getArmorContents();
+        if (armor != null) {
+            for (org.bukkit.inventory.ItemStack piece : armor) {
+                total += getItemACBonus(piece);
+            }
+        }
+        // Offhand shield
+        org.bukkit.inventory.ItemStack offhand = player.getInventory().getItemInOffHand();
+        total += getItemACBonus(offhand);
+        return total;
+    }
+
+    /** Read ac_bonus from DND special armor item PDC. Returns 0 for non-armor. */
+    private static int getItemACBonus(org.bukkit.inventory.ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return 0;
+        var pdc = item.getItemMeta().getPersistentDataContainer();
+        // Must be DND special item
+        if (!pdc.has(id.patahgaming.dndplugin.item.ItemSpesialManager.KEY_ITEM_ID,
+                org.bukkit.persistence.PersistentDataType.STRING)) return 0;
+        // Read ac_bonus from PDC
+        Integer ac = pdc.get(id.patahgaming.dndplugin.item.ItemSpesialManager.KEY_AC_BONUS,
+                org.bukkit.persistence.PersistentDataType.INTEGER);
+        return ac != null ? ac : 0;
     }
 
     /** Mob AC = natural armor (based on mob type) */

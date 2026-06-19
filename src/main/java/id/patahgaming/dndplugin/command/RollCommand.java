@@ -294,6 +294,15 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        // FIRST_BLOOD special effect: ×2 damage on first hit (target at full HP)
+        String effectStr = ctx != null ? ctx.getOrDefault("weaponEffect", "NONE") : "NONE";
+        boolean firstBlood = "FIRST_BLOOD".equalsIgnoreCase(effectStr);
+        if (firstBlood && target.getHealth() >= target.getAttribute(
+                org.bukkit.attribute.Attribute.MAX_HEALTH).getValue() - 0.5) {
+            totalDamage *= 2;
+            player.sendMessage("§c⚡ First Blood! Damage ×2!");
+        }
+
         // PATCH: DamageResult — handle UNCONSCIOUS vs DEAD
         CombatEngine.DamageResult dmgResult = CombatEngine.applyDamage(target, totalDamage, dmgType);
         int actualDmg = dmgResult.finalDamage;
@@ -322,9 +331,9 @@ public class RollCommand implements CommandExecutor, TabCompleter {
             case ALIVE -> { /* nothing */ }
         }
 
-        // Trigger weapon special effect (FIRE_ON_HIT, etc.)
-        String effectStr = ctx.getOrDefault("weaponEffect", "NONE");
-        if (!effectStr.equals("NONE") && !effectStr.equals("null")) {
+        // Trigger weapon special effect (FIRE_ON_HIT, LIFE_STEAL, etc.)
+        // FIRST_BLOOD already handled above (×2 damage); skip redundant onHit
+        if (!firstBlood && !effectStr.equals("NONE") && !effectStr.equals("null")) {
             try {
                 id.patahgaming.dndplugin.item.SpecialEffect effect =
                         id.patahgaming.dndplugin.item.SpecialEffect.valueOf(effectStr);

@@ -5,6 +5,7 @@ import id.patahgaming.dndplugin.dice.DiceItemFactory;
 import id.patahgaming.dndplugin.dice.DiceType;
 import id.patahgaming.dndplugin.engine.combat.PendingRoll;
 import id.patahgaming.dndplugin.dice.DiceRoller;
+import id.patahgaming.dndplugin.DndPlugin;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
@@ -41,16 +42,38 @@ public class DiceBlockListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDicePlace(PlayerInteractEvent event) {
-        // Hanya right-click block
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        // Handle dice placement (RIGHT_CLICK_BLOCK)
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            Player player = event.getPlayer();
+            ItemStack item = event.getItem();
+            if (item == null) return;
 
-        Player player = event.getPlayer();
-        ItemStack item = event.getItem();
-        if (item == null) return;
+            // Dice item → play dice animation
+            if (isDiceItem(item)) {
+                handleDicePlace(event, player, item);
+                return;
+            }
 
-        // Cek item ada PDC dnd:item_type = DICE
-        if (!isDiceItem(item)) return;
+            // Consumable item → drink/eat
+            if (isConsumable(item)) {
+                handleConsumableUse(event, player, item);
+                return;
+            }
+        }
 
+        // Handle consumable right-click air
+        if (event.getAction() == Action.RIGHT_CLICK_AIR) {
+            Player player = event.getPlayer();
+            ItemStack item = event.getItem();
+            if (item == null) return;
+
+            if (isConsumable(item)) {
+                handleConsumableUse(event, player, item);
+            }
+        }
+    }
+
+    private void handleDicePlace(PlayerInteractEvent event, Player player, ItemStack item) {
         // Cancel interaction — jangan taruh wool beneran (Adventure mode compat)
         event.setCancelled(true);
 
@@ -67,6 +90,87 @@ public class DiceBlockListener implements Listener {
         // Play dice animation dengan SNAPSHOT (masih punya amount + PDC valid)
         Location diceLoc = event.getClickedBlock().getLocation().add(0.5, 0, 0.5);
         playDiceAnimation(player, diceLoc, diceSnapshot);
+    }
+
+    /**
+     * Right-click consumable → heal player + consume item.
+     */
+    private void handleConsumableUse(PlayerInteractEvent event, Player player, ItemStack item) {
+        event.setCancelled(true);
+
+        // Read heal_dice from PDC
+        var pdc = item.getItemMeta().getPersistentDataContainer();
+        String healDiceStr = pdc.get(
+                new NamespacedKey("dndplugin", "heal_dice"),
+                org.bukkit.persistence.PersistentDataType.STRING);
+        if (healDiceStr == null || healDiceStr.isEmpty()) {
+            player.sendMessage("§cItem konsumabel ini tidak memiliki heal_dice.");
+            return;
+        }
+
+        // Parse heal dice: "2d4+2" or "4d4+4" or "1d8"
+        int amount = 0;
+        int sides = 0;
+        int bonus = 0;
+        try {
+            String[] parts = healDiceStr.split("d");
+            amount = Integer.parseInt(parts[0]);
+            if (parts[1].contains("+")) {
+                String[] split = parts[1].split("\\+");
+                sides = Integer.parseInt(split[0]);
+                bonus = Integer.parseInt(split[1]);
+            } else if (parts[1].contains("-")) {
+                String[] split = parts[1].split("-");
+                sides = Integer.parseInt(split[0]);
+                bonus = -Integer.parseInt(split[1]);
+            } else {
+                sides = Integer.parseInt(parts[1]);
+            }
+        } catch (Exception e) {
+            player.sendMessage("§cGagal parse heal_dice: " + healDiceStr);
+            return;
+        }
+
+        // Roll heal
+        int heal = DiceRoller.rollDice(amount, sides, bonus);
+        heal = Math.max(1, heal); // minimum 1
+
+        // Apply heal
+        double maxHp = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+        double newHp = Math.min(maxHp, player.getHealth() + heal);
+        player.setHealth(newHp);
+
+        // Effects
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_GENERIC_DRINK, 0.8f, 1.2f);
+        player.getWorld().spawnParticle(Particle.HEART,
+                player.getLocation().add(0, 1.5, 0),
+                8, 0.5, 0.5, 0.5, 0.1);
+
+        // Title notification
+        player.sendTitle("§c❤ +" + heal + " HP", "§7" + healDiceStr + " → " + heal, 5, 30, 15);
+
+        // Consume 1 item
+        item.setAmount(item.getAmount() - 1);
+        if (item.getAmount() <= 0) {
+            player.getInventory().setItemInMainHand(null);
+        }
+
+        // Update scoreboard HP
+        id.patahgaming.dndplugin.ui.ScoreboardManager.refresh(
+                DndPlugin.getInstance(), player);
+
+        // Broadcast
+        String itemName = item.getItemMeta().getDisplayName();
+        Bukkit.broadcastMessage("§c🧪 " + player.getName() + " §7menggunakan "
+                + (itemName != null ? itemName : "§fitem") + " §7→ §c❤ +" + heal + " HP");
+    }
+
+    /** Check if an ItemStack is a DND consumable item. */
+    private boolean isConsumable(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return false;
+        var pdc = item.getItemMeta().getPersistentDataContainer();
+        String typeStr = pdc.get(KEY_ITEM_TYPE, org.bukkit.persistence.PersistentDataType.STRING);
+        return "CONSUMABLE".equalsIgnoreCase(typeStr);
     }
 
     /** Cegah dadu di-drop — dadu permanen, gak bisa dibuang. */

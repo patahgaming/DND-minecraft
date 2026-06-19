@@ -29,10 +29,12 @@ Lore Penting   :
      sebagai sistem peringatan dini regional. Anak-anak mereka, Mira dan Leni,
      juga diculik dan ditahan di altar sebagai LEVERAGE: "Patuh atau anakmu mati."
 Fraksi/Pihak   :
-  - Berkuasa: Dewan Desa dipimpin Elder Marek (tetua Thornhollow, ex-ranger)
-  - Musuh   : Klan Illager dari Illager Manor — Malachar + Vindicators + Ravager
-  - Netral  : Eagle Eye bersaudara (informan yang sekarang personally invested),
-              Laenteglos Aria (penyanyi pengembara — spy)
+  - Berkuasa: Elder Marek (tetua Desa Wolfgang, ex-ranger) — quest giver awal
+  - Musuh   : Klan Illager dari Illager Manor — Malachar the Arcanist (final boss)
+            + Commander Vex (mid-boss, field commander) + Vindicators + Pillagers
+  - Ally    : Eagle Eye bersaudara (Eldric/Eryk/Edmar — watch tower guardians)
+            Laenteglos Aria (elven scout, sahabat Eldric — hutang nyawa)
+            Bram Mossfeld (adik Lydia, barkeep The Pale Pale — informan)
 ```
 
 ---
@@ -175,6 +177,146 @@ Tujuan room    : Orientasi EMOSIONAL — party dapat:
 
 ---
 
+#### ⚡ THE FORK — Pilihan Rute: Memutar atau Menerobos? *(~5 mnt decision)*
+
+```
+SETELAH Room 1 : Party sekarang tahu tujuan mereka: Conduit Altar di dasar Dried
+                 Ocean, di TIMUR. Tapi ada dua jalan untuk mencapai sana —
+                 dan pilihan ini akan mengubah seluruh pengalaman sesi.
+
+                 🏘️ RUTE DESA — "JALAN MEMUTAR" (BENTUK U, LEWAT 4 DESA):
+                 ──────────────────────────────────────────────────────
+                 **Wolfgang** → **Alnerwick** → **Suka Maju** → **Surya City**
+                 (desa utama) → lalu tetap harus menembus **Wizard Complex**
+                 sebelum turun ke Conduit Altar.
+
+                 Jarak: ~1000 block. Waktu: ~1.5 game-day (istirahat di desa).
+                 LEVEL BAHAYA: SEDANG — perjalanan antar desa relatif aman
+                 (1-2 serigala/zombie), TAPI Wizard Complex di akhir tetap
+                 penuh Witch + Illager.
+
+                 ✨ KEUNTUNGAN CERITA (ini yang bikin rute ini BERHARGA):
+
+                 🍺 ALNERWICK — THE PALE PALE TAVERN:
+                   Bram Mossfeld, adik Lydia, bekerja sebagai barkeep di sini.
+                   Party bisa ketemu dia → personal stake TERBANGUN.
+                   Bram cerita tentang kakaknya, tentang keponakan-ponakan
+                   yang diculik. Dia kasih info yang gak bisa didapat dari
+                   NPC lain: "Lydia itu kuat. Dia gak akan nangis di depan
+                   anak-anaknya. Tapi dia butuh keluar. Tolong... dia kakakku."
+
+                   Di sini party juga bisa dengar rumor tentang "Commander Vex"
+                   — Vindicator tanpa ampun yang memimpin semua penculikan.
+
+                 🗼 WATCH TOWERS (WT3, WT4, WT5) — OPSIONAL:
+                   Di sepanjang rute, party bisa mampir ke Watch Towers.
+                   - WT3 dijaga Eryk (si tengah, paling humoris)
+                   - WT4 & WT5 dijaga Edmar (si bungsu, paling pendiam)
+
+                   Kalau party MASUK ke tower: mereka ketemu saudara Eldric.
+                   Eryk bakal cerita dengan logat daerahnya: "Woi... jadi kau
+                   udah ketemu Eldric? Dia yang paling tua. Paling serius.
+                   Tapi dia juga yang paling... punya sesuatu untuk dilindungi."
+
+                   REVEAL LORE (kalau party eksplor):
+
+                   > "Kami bertiga — Eldric, Eryk, Edmar. Tiga bersaudara
+                   >  kembar identik. Sudah 20 tahun kami jaga menara ini.
+                   >  Orang-orang panggil kami 'Eagle Eye.' Mereka pikir kami
+                   >  satu orang. Bisa teleportasi. Bisa ada di mana-mana.
+                   >  Padahal cuma ilusi — ilusi yang kami pelihara supaya
+                   >  orang takut macam-macam di perbatasan ini."
+
+                   > "Tapi sekarang... Malachar tahu. Dia gak serang menara.
+                   >  Dia serang KELUARGA Eldric. Istri dia. Anak-anak dia.
+                   >  Karena dia tahu Eldric gak bisa tinggalkan pos."
+
+                   INI BUKAN PAKSAAN. Party bisa skip semua tower dan tetap
+                   lanjut. Tapi kalau mereka mampir — mereka dapat EMOTIONAL
+                   WEIGHT sebelum final encounter. Mereka kenal saudara-
+                   saudaranya. Mereka tahu harga yang dibayar keluarga ini.
+
+                 🏙️ SURYA CITY — KOTA UTAMA:
+                   Desa terbesar di region. Di sini party bisa:
+                   - Beli supplies (Potion of Healing, arrows)
+                   - Dengar cerita tentang Elara Dawnweaver — tabib muda yang
+                     diculik. Warga Surya City kenal dia. "Dia selalu bawa
+                     moonpetal flowers... dia gak pantas ada di altar itu."
+                   - Dapat info tentang Illager movement terkini
+
+                 ⚠️ WIZARD COMPLEX — TETAP HARUS DILEWATI:
+                   Setelah Surya City, party harus menembus Wizard Complex
+                   untuk mencapai Conduit Altar. Musuh di sini TETAP ADA —
+                   Witch + Vindicator + Pillager. Tidak bisa dihindari.
+                   TAPI: party sampai di sini dengan HP penuh, supplies dari
+                   Surya City, dan EMOTIONAL INVESTMENT dari perjalanan desa.
+
+                 RINGKASAN RUTE DESA:
+                 ✅ Ketemu Bram → koneksi personal ke Lydia
+                 ✅ Opsional: lore Eagle Eye triplets
+                 ✅ Supplies & info dari Surya City
+                 ✅ Tiba di Wizard Complex dengan HP PENUH + lore lengkap
+                 ❌ Waktu lebih lama — ritual hampir puncak
+                 ❌ Wizard Complex tetap penuh musuh
+
+                 ⚔️ RUTE PINTAS — "TEMBUS LANGSUNG" (SKIP SEMUA DESA):
+                 ─────────────────────────────────────────────
+                 Dari WT2 langsung ke TIMUR → WIZARD COMPLEX → Conduit Altar.
+
+                 Jarak: ~350 block. Waktu: ~0.5 game-day.
+                 LEVEL BAHAYA: TINGGI.
+
+                 Party langsung terjun ke Wizard Complex:
+                 - 2-3 Witch menjaga reruntuhan
+                 - 1-2 Illager Vindicator patroli
+                 - Bukit di atas Illager Manor (1026-1241, 2494-2613) —
+                   tambahan patroli Illager. BUKAN markas utama, tapi
+                   party lewat di atasnya.
+
+                 RINGKASAN RUTE PINTAS:
+                 ✅ CEPAT — tiba sebelum ritual puncak
+                 ✅ Langsung ke action
+                 ❌ TIDAK ketemu Bram — tidak ada koneksi personal ke Lydia
+                 ❌ TIDAK dapat lore Eagle Eye triplets
+                 ❌ TIDAK bisa resupply di Surya City
+                 ❌ HP tidak full saat masuk Wizard Complex
+                 ❌ Party tidak kenal siapa yang mereka selamatkan —
+                    cuma "3 tawanan" tanpa wajah, tanpa cerita
+
+DM DECISION   : Ini BUKAN "rute benar vs rute salah." Dua-duanya valid.
+                Rute Desa = STORY-FOCUSED. Rute Pintas = ACTION-FOCUSED.
+                Party yang suka roleplay bakal pilih Desa. Party yang suka
+                combat-efficient bakal pilih Pintas.
+
+                BIARKAN party berdebat. JANGAN rush. Ini momen paling
+                penting untuk player agency di seluruh sesi.
+
+                Kalau ditanya NPC:
+                - Elder Marek: "Jalan memutar? Kau bakal lewat Alnerwick.
+                  Bram, adiknya Lydia, kerja di tavern di sana. Dia...
+                  dia perlu dengar dari kalian langsung."
+                - Eldric: "Aku... terserah kalian. Tapi kalau kau lewat
+                  Alnerwick... tolong sampaikan ke Bram — adik iparku —
+                  bahwa aku masih di sini. Bahwa aku belum menyerah."
+
+Konsekuensi    : - RUTE DESA → party tiba di Conduit Altar dengan HP PENUH,
+                  supplies dari Surya City, EMOTIONAL WEIGHT penuh.
+                  TAPI ritual SUDAH masuk Ronde 2 (Lydia mulai disedot,
+                  Elara berikutnya). DM: langsung mulai Room 4 di Ronde 2.
+                  PARTY PUNYA ALASAN PERSONAL untuk menyelamatkan tawanan —
+                  mereka kenal Bram. Mereka kenal saudara Eldric.
+
+                - RUTE PINTAS → party tiba di Conduit Altar lebih CEPAT.
+                  Ritual masih Ronde 1. TAPI: HP berkurang (wizard combat),
+                  supplies terbatas, dan — yang paling penting — party
+                  TIDAK PUNYA KONEKSI PERSONAL ke tawanan. Lydia cuma nama.
+                  Mira & Leni cuma "anak-anak." DM: deskripsikan tawanan
+                  TANPA emotional buildup — party harus membangun koneksi
+                  itu DI TENGAH COMBAT, yang jauh lebih sulit.
+```
+
+---
+
 #### Room 2 — Teka-teki / Tantangan Sosial: "Perpustakaan Wizard" *(~30 mnt)*
 
 ```
@@ -183,9 +325,16 @@ Lokasi         : Wizard Complex (Wizard Tower 1 — 1112,63,2643 atau Tower 2/3)
                  buku-buku lapuk, dan mekanisme arcane yang masih menyala.
                  Di sinilah para Wizard dulu meneliti Conduit sebelum menghilang.
 
-Tantangan      : PUZZLE + INVESTIGATION — Untuk menghentikan ritual Conduit,
-                 party butuh "Crystal of Tidal Binding" — artefak yang disembunyikan
-                 para Wizard di dalam kompleks ini. Tapi pintu vault tersegel.
+                 ⚠️ CATATAN DM: Party SUDAH berada di Wizard Complex — apapun
+                 rute yang mereka pilih. Kalau RUTE DESA → mereka sampai di
+                 sini dengan HP penuh dan supplies dari Surya City, tapi
+                 ritual sudah dekat puncak. Kalau RUTE PINTAS → mereka sampai
+                 lebih cepat tapi HP berkurang dan tanpa supplies.
+
+Tantangan      : PUZZLE + INVESTIGATION + COMBAT (kalau Rute Bahaya) —
+                 Untuk menghentikan ritual Conduit, party butuh "Crystal of
+                 Tidal Binding" — artefak yang disembunyikan para Wizard di
+                 dalam kompleks ini. Tapi pintu vault tersegel.
 
                  Puzzle: "Tiga Elemental Seal" — tiga tuas di tiga menara berbeda
                  harus ditarik dalam urutan yang benar: Fire → Water → Air.
@@ -194,6 +343,10 @@ Tantangan      : PUZZLE + INVESTIGATION — Untuk menghentikan ritual Conduit,
 
                  Kalau salah urutan: spawn 1 Blaze (lemah, HP dikurangi) —
                  jebakan elemental yang sudah melemah seiring waktu.
+
+                 KALAU RUTE BAHAYA: Ada 2-3 WITCH + 1-2 Illager Vindicator
+                 patroli di dalam kompleks. Party harus menghadapi mereka
+                 SAMBIL menyelesaikan puzzle. Combat + puzzle = chaos bagus.
 
 Clue tersembunyi (Investigation DC 15):
                  - Buku harian menyebut "The Conduit membutuhkan darah, bukan air"
@@ -324,8 +477,98 @@ Kondisi menang : Multiple layers:
                  - TRAGIC: Lydia mati tapi anak selamat → Eldric menerima
                    anak-anaknya di WT2, tanpa istrinya.
                  - DEVASTATING: Lydia mati + anak mati → Eldric hancur.
-                   Eagle Eye tidak akan pernah sama lagi. DM: ini seharusnya
-                   HANYA terjadi kalau party benar-benar gagal total.
+                   Eagle Eye tidak akan pernah sama lagi.
+                 - ☠️ TOTAL FAILURE — THE FLOOD: Semua 3 tumbal mati + party wipe
+                   → Conduit aktif penuh. Lihat **ENDING: BANJIR BANDANG** di bawah.
+
+ ============ ☠️ TOTAL FAILURE — BANJIR BANDANG ============
+
+Trigger        : Ketika salah satu kondisi ini tercapai:
+                 - SEMUA party member mencapai 0 HP (TPK — Total Party Kill)
+                 - Ke-3 tumbal (Lydia, Elara, Garrick) mati semua
+                 - Malachar menyelesaikan ritual tanpa gangguan selama 5 ronde penuh
+
+Adegan         : Arena hening sejenak. Lalu dengungan Conduit berubah jadi
+                 getaran dalam — lebih dalam dari suara, getaran di tulang.
+                 Malachar, terluka atau tidak, berdiri di depan altar.
+                 Tangannya terangkat, suaranya lirih tapi bergema:
+
+                 > "Tiga abad. Tiga abad lautan kering. Nenek moyangku tidur
+                 >  di dasar yang retak, dan para Wizard tertawa dari menara
+                 >  mereka. SEKARANG... AKHIRI TIDUR ITU."
+
+                 Commander Vex (atau sisa Illager yang masih hidup) maju ke
+                 tengah altar — di tangannya, sebuah balok pirus bercahaya:
+                 **CONDUIT BLOCK.** Benda itu berdenyut dengan cahaya biru
+                 yang semakin terang, seirama dengan detak jantung.
+
+                 Vex meletakkan Conduit Block di tengah altar.
+
+                 Hening 3 detik.
+
+                 Lalu —
+
+                 **LEDAKAN.**
+
+                 Bukan api. Bukan asap. Tapi AIR. Air murni berwarna biru
+                 elektrik menyembur ke atas dari Conduit seperti geyser
+                 raksasa, menjulang 100 blok ke langit, terlihat dari semua
+                 penjuru — Wolfgang, Surya City, Alnerwick, Suka Maju.
+                 Eagle Eye melihatnya dari WT2. Eldric tahu.
+
+                 Air mulai menyebar. CEPAT.
+
+                 **Detik 1-10:** Air mencapai dasar lautan kering. Bangkai
+                 kapal kuno bergerak untuk pertama kalinya dalam 300 tahun.
+                 Karang-karang mati lenyap di bawah gelombang.
+
+                 **Detik 10-30:** Air naik ke tebing-tebing sekitar. Post
+                 Illager tenggelam. Wizard Complex — menara-menara penyihir
+                 kuno yang sudah berdiri sejak sebelum pengeringan — satu
+                 per satu ambruk ke dalam air yang naik.
+
+                 **Menit 1:** Gelombang pertama mencapai **Wolfgang.**
+                 Elder Marek berdiri di tepi desa. "Maafkan aku," bisiknya.
+                 Air merobohkan rumah-rumah kayu. Bram Mossfeld di The Pale
+                 Pale, Alnerwick, mendengar suara gemuruh. Dia naik ke atap
+                 tavern. Dia melihat tembok air mendekat. Dia tidak lari.
+
+                 **Menit 2:** Gelombang mencapai **Surya City** dan **Suka
+                 Maju.** Ratusan warga berlari — tapi ke mana? Tidak ada
+                 tempat yang cukup tinggi. Air terus naik.
+
+                 **Menit 5:** Watch Towers. WT1, WT3, WT4, WT5 — masing-masing
+                 punya Eagle Eye di puncaknya. Eryk dan Edmar selamat — menara
+                 cukup tinggi. Tapi **WT2**... Eldric berdiri di puncak,
+                 memandang ke timur. Ke arah altar. Ke arah terakhir dia
+                 tahu keluarganya berada. Dia tidak bergerak. Dia menunggu.
+                 Air naik sampai ke kaki menara. Lalu ke lutut menara.
+                 Eryk berteriak dari WT3: "ELDRIC! LOMPAT! KAU BISA BERENANG!"
+                 Eldric tidak menjawab.
+
+                 **Menit 10:** Seluruh basin Dried Ocean sekarang adalah
+                 LAUTAN. Ratusan blok air dalam yang membentang dari ujung
+                 ke ujung. Di dasarnya: reruntuhan 4 desa, bangkai penduduk,
+                 kapal-kapal kuno yang sekarang berlayar lagi — hanyut tanpa
+                 arah. Dan Conduit, di tengahnya, terus menyala — jantung
+                 biru yang sekarang berdetak di bawah air.
+
+                 Malachar the Arcanist berdiri di tebing tertinggi yang tersisa,
+                 menyaksikan air naik. Commander Vex di sampingnya. Tidak ada
+                 kemenangan di wajah Malachar — hanya kelegaan yang dalam dan
+                 aneh. "Akhirnya... lautku pulang."
+
+DM Note       : **INI ADALAH BAD ENDING.** Jika party TPK di Room 4, BUKAN
+                berarti sesi berakhir dengan "coba lagi." Artinya cerita ini
+                mencapai akhir tragisnya. DM harus narasikan epilog banjir
+                dengan gravitas — tapi juga dengan hormat ke party yang sudah
+                berjuang. Mereka kalah, tapi itu adalah cerita yang valid.
+
+                Setelah narasi banjir, DM bisa tawarkan:
+                - **Ini canon.** Kita hidup dengan konsekuensinya.
+                - **One-shot ulang.** "Minggu depan, coba lagi?"
+                - **Lanjutan.** "200 tahun kemudian, di dunia yang sekarang
+                  adalah lautan dengan pulau-pulau kecil..."
 ```
 
 ---
@@ -430,6 +673,9 @@ Ending hook    : (Opsional — benih kampanye lanjutan)
 **Post-Boss (Heroic):**
 > *"The Arcanist jatuh. Conduit meredup. Suara air yang menderu pelan-pelan menghilang. Lydia — masih lemah, rantainya baru putus — tidak melihat ke arah party. Dia melihat ke kandang. 'Mira... Leni...' Gadis-gadis cilik itu keluar dari kandang, berlari memeluk ibunya. Di kejauhan, di atas bukit, siluet seorang pria berdiri di puncak WT2 — menatap ke sini. Menunggu."*
 
+**Post-Boss (FLOOD — Total Failure):**
+> *"Conduit meledak. Bukan ledakan api — tapi ledakan air. Geyser biru elektrik menjulang setinggi 100 blok, terlihat dari setiap desa, setiap menara. Di WT2, Eldric melihatnya. Dia tahu. Air menyebar dengan kecepatan mengerikan — pertama menenggelamkan altar, lalu dasar lautan, lalu tebing-tebing. Wolfgang. Alnerwick. The Pale Pale tempat Bram menunggu kabar yang tidak akan pernah datang. Surya City. Suka Maju. Satu per satu lenyap di bawah gelombang. Watch Towers masih berdiri — cukup tinggi — tapi Eldric tidak turun. Dia tetap di puncak WT2, menatap timur. 'Lydia... Mira... Leni...' Air terus naik. Eryk berteriak dari WT3. Eldric tidak menjawab."*
+
 ---
 
 ## RAILROADING SAFETY NET
@@ -451,6 +697,66 @@ Jika pemain off-track        : Eagle Eye tiba-tiba muncul di menara terdekat
                                 Conduit-nya di TIMUR! Dengerin suara itu —
                                 dengungan arcane dari dasar lautan kering."
                                 (Pakai suara note block untuk menarik perhatian)
+
+☠️ JIKA PLAYER LANGSUNG KE ILLAGER MANOR (SEQUENCE BREAK):
+─────────────────────────────────────────────────────────
+Ini skenario paling bahaya — party memutuskan untuk skip semua
+dan langsung serbu Illager Manor dengan harapan bunuh villain
+cepat dan tamat.
+
+DM: JANGAN PANIK. Ini bukan gagal desain. Ini player agency.
+Tapi ada LAPISAN PERLINDUNGAN yang bikin ini tetap seru:
+
+LAPISAN 1 — MALACHAR TIDAK ADA DI MANOR.
+  Dia SUDAH di Conduit Altar mempersiapkan ritual. Manor adalah
+  markas administratif — bukan lokasi ritual. Commander Vex juga
+  sudah di Altar menjaga tawanan. Yang ada di Manor:
+  - 5-8 Illager (Vindicator + Pillager + 1-2 Evoker junior)
+  - 1 Ravager di gerbang
+  - Ini SUICIDE untuk party level 1-2. DM: gambarkan dengan jujur.
+    "Dari kejauhan, kalian melihat gerbang Manor dijaga Ravager
+    seukuran gajah. Di atas tembok, 3 Pillager dengan crossbow
+    berpatroli. Ini bukan misi stealth — ini bunuh diri."
+
+LAPISAN 2 — ADA PETUNJUK BAHWA MALACHAR SUDAH PERGI.
+  Kalau party stealth masuk atau interogasi Illager yang terpisah:
+  "The Arcanist? Dia sudah berangkat ke Altar sejak kemarin.
+  Bawa tiga tawanan. Commander Vex yang pimpin."
+  Party sadar: mereka buang-buang waktu di sini.
+
+LAPISAN 3 — KALAUPUN PARTY MENANG (ajaib, crit semua, DM kasih
+  mercy), MALACHAR TETAP TIDAK MATI.
+  Ritual tetap berjalan di Altar. Conduit tetap aktif. Banjir
+  tetap datang. Karena villain yang sebenarnya bukan Malachar —
+  tapi RITUAL itu sendiri. Membunuh Malachar tanpa menghancurkan
+  Conduit = air tetap naik, desa tetap tenggelam.
+
+  Malachar, sekarat, tertawa: "Kau pikir... aku yang penting?
+  Conduit sudah menyala. Ritual tidak bisa dihentikan... bahkan
+  oleh kematianku."
+
+  Party menang 1 boss — tapi mereka MASIH HARUS ke Altar untuk
+  hentikan Conduit. DAN sekarang mereka terluka parah.
+
+LAPISAN 4 — KONSEKUENSI NARATIF.
+  Kalau party bunuh Malachar di Manor sebelum ritual:
+  - Commander Vex menyelesaikan ritual SENDIRI. Tanpa Malachar,
+    ritual lebih lambat — kasih party waktu 1 ronde ekstra di Altar.
+  - Tapi Vex, tanpa Malachar yang menahannya, jadi LEBIH BRUTAL.
+    "The Arcanist sudah mati? Bagus. Dia selalu terlalu banyak
+    bicara. Sekarang... kita lakukan dengan caraku."
+  - Epilog berubah: Malachar mati sebagai villain yang bahkan
+    gak sempat di-confront tentang kebenaran leluhurnya. Tidak
+    ada redemption arc. Tidak ada DC 18 Persuasion. Dia mati
+    sebagai monster — dan itu KEHILANGAN untuk cerita.
+
+DM SUMMARY:
+  - Manor = fortifikasi maksimum, suicide untuk level 1-2
+  - Malachar gak di Manor — dia di Altar
+  - Membunuh Malachar ≠ menghentikan ritual
+  - Player AGENCY tetap dihormati — tapi dunia bereaksi realistis
+  - Kalau party persistent dan entah bagaimana menang → CERITA
+    tetap jalan. Hanya lebih gelap. Lebih brutal. Tanpa closure.
 ```
 
 ---
@@ -459,9 +765,9 @@ Jika pemain off-track        : Eagle Eye tiba-tiba muncul di menara terdekat
 
 ### Elder Marek
 - **File:** `data/npcs/elder_marek.yml`
-- **Lokasi:** forest_entrance (Thornhollow)
-- **Role:** Quest giver. Ex-ranger, 30 tahun patroli Darkwood. Kehilangan mata kiri karena dire wolf. Tahu tentang goa hutan tapi trauma dan tidak mau mendekat.
-- **Voice:** Tua, bijaksana, sedikit paranoid. "Aku sudah 30 tahun jaga hutan ini. Aku tahu kalau ada yang tidak beres."
+- **Lokasi:** Desa Wolfgang (story node: `wolfgang_village`)
+- **Role:** Quest giver. Tetua Desa Wolfgang, ex-ranger 30 tahun. Party pertama kali bertemu dia di Wolfgang — dia yang memberi misi awal dan mengarahkan party ke Laenteglos Aria di Dried Ocean outpost. Kehilangan mata kiri karena dire wolf.
+- **Voice:** Tua, bijaksana, urgent. "Pergilah ke timur, ke Dried Ocean. Cari Aria — dia menunggumu di outpost dekat Conduit Ruin. Dia tahu jalan masuknya. Dia... punya alasan pribadi untuk membantu."
 
 ### Eagle Eye (Eldric / Eryk / Edmar)
 - **File:** `data/npcs/watch_tower_worker_leader.yml`
@@ -473,15 +779,24 @@ Jika pemain off-track        : Eagle Eye tiba-tiba muncul di menara terdekat
 
 ### Laenteglos Aria
 - **File:** `data/npcs/laenteglos_aria.yml`
-- **Lokasi:** forest_entrance (awalnya)
-- **Role:** Penyanyi pengembara → SPY Illager (twist Room 3)
-- **Voice:** Merdu, charming, manipulatif. Backstory-nya kosong — DM isi sesuai kebutuhan.
+- **Lokasi:** Dried Ocean outpost (dekat Conduit Ruin)
+- **Role:** Elven scout, mantan ranger, sahabat Eagle Eye. PERNAH DISELAMATKAN oleh Eldric 10 tahun lalu — dia berhutang nyawa. Sekarang dia jadi point of contact party di dekat Conduit, memberikan tactical intel dan scouting report. BUKAN spy — dia genuinely mau bantu selamatkan keluarga Eldric.
+- **Voice:** Tenang, profesional, precise. Tapi ada api di balik ketenangannya. "Eldric saved me once. Now I save his family. That's how debts work where I come from."
+- **DM Note:** Aria digeser dari peran spy (versi lama) menjadi ally scout (versi baru). Kalau kamu tetap mau twist pengkhianatan, bisa pakai NPC lain atau bikin Aria punya rahasia tambahan.
 
-### Bram Stonehand
+### Bram Mossfeld (née Stonehand)
 - **File:** `data/npcs/bram_stonehand.yml`
-- **Lokasi:** forest_entrance (Thornhollow)
-- **Role:** Saksi mata selamat dari serangan Wolfgang. Ex-pemotong batu, sekarang trauma dan penuh rasa bersalah. Satu-satunya saksi langsung raid Illager.
-- **Voice:** Tua, gemetar, tapi bersungguh-sungguh. "Aku sembunyi di balik sumur. Aku dengar mereka bilang... Conduit. Maafkan aku... aku tidak melawan."
+- **Lokasi:** The Pale Pale tavern — Alnerwick
+- **Role:** ADIK LYDIA MOSSFELD. Bartender di The Pale Pale, tavern milik kakaknya. Bukan pemotong batu — dia barkeep yang ramai, loyal, dan sekarang dihantui rasa bersalah karena tidak bisa melindungi kakaknya saat Illager menculik Lydia + keponakannya. Dia jadi sumber informasi party tentang pergerakan Illager — dia sudah ngumpulin rumor dari setiap pelanggan tavern.
+- **Voice:** Hangat, keras, tapi sekarang pecah. "Dia kakakku. Dia yang besarin aku setelah orang tua kami mati. Dan aku... aku cuma bisa bersihin gelas saat dia diambil. Tolong. Bawa dia pulang. Bawa Mira dan Leni pulang."
+- **DM Note:** Kalau party kembali dengan Lydia selamat, Bram harus ada di reunion scene — dia keluarga.
+
+### Commander Vex
+- **File:** `data/npcs/commander_vex.yml`
+- **Lokasi:** Conduit Altar (Room 4) — mid-boss, jaga altar
+- **Role:** TANGAN KANAN MALACHAR. Vindicator captain yang memimpin semua 3 raid penculikan (Surya-City, Wolfgang, Alnerwick). Dia yang melakukan semua kerja kotor sementara Malachar menunggu di Illager Manor. Party HARUS mengalahkan dia dulu sebelum bisa mencapai Malachar.
+- **Voice:** Pendek, brutal, tanpa basa-basi. Tidak monolog. Tidak negosiasi. "Good hit" (kalau party crit) — lalu coba bunuh 2× lebih keras.
+- **Encounter flow:** Commander Vex (mid-boss, Altar) → Free captives → Illager Manor → Malachar (final boss).
 
 ### Malachar the Arcanist
 - **File:** `data/npcs/the_arcanist.yml`
@@ -531,16 +846,16 @@ Jika pemain off-track        : Eagle Eye tiba-tiba muncul di menara terdekat
 **Cara pakai:**
 1. Copy-paste blueprint ini ke second monitor / tablet sebagai briefing DM
 2. Spawn NPC sebelum sesi:
-   - `/spawnnpc elder_marek` — quest giver
-   - `/spawnnpc bram_stonehand` — saksi mata
-   - `/spawnnpc watch_tower_worker_leader` — Eagle Eye (khusus Eldric, WT2). DM note: kalau party ke menara lain, spawn lagi dengan nama sama — itu Eryk/Edmar.
-   - `/spawnnpc laenteglos_aria` — spy (muncul di Room 3)
-   - `/spawnnpc the_arcanist` — boss final (spawn di altar, entity EVOKER)
-   - `/spawnnpc captive_elara` — tawanan pilar 2
-   - `/spawnnpc captive_garrick` — tawanan pilar 3
+   - `/spawnnpc elder_marek` — quest giver (Desa Wolfgang)
+   - `/spawnnpc bram_stonehand` — adik Lydia, barkeep The Pale Pale (Alnerwick)
+   - `/spawnnpc watch_tower_worker_leader` — Eagle Eye / Eldric (WT2). Kalau party ke menara lain, spawn lagi — itu Eryk/Edmar.
+   - `/spawnnpc laenteglos_aria` — elven scout, ally (Dried Ocean outpost)
+   - `/spawnnpc commander_vex` — MID-BOSS (Conduit Altar, entity VINDICATOR)
+   - `/spawnnpc the_arcanist` — FINAL BOSS (Illager Manor, entity EVOKER)
+   - `/spawnnpc captive_elara` — tawanan pilar 2 (healer, ritual knowledge)
+   - `/spawnnpc captive_garrick` — tawanan pilar 3 (blacksmith, bisa fight)
    - `/spawnnpc captive_lydia` — tawanan pilar 1 (ISTRI EAGLE EYE — PRIORITAS!)
-   - Anak-anak (Mira & Leni) tidak perlu NPC template — gunakan dua Villager baby
-     dengan nametag "Mira" dan "Leni" di kandang dekat altar, atau cukup narrasikan.
+   - Anak-anak (Mira 5, Leni 3): dua Villager baby dengan nametag, di iron cage dekat altar
 3. Pastikan lokasi POI sudah ada di server
 4. ATUR TONE: sesi ini lebih gelap dan emosional dari biasanya. Room 1 reveal harus
    pelan dan personal. Room 4 anak-anak di kandang harus digambarkan dengan hati-hati —
