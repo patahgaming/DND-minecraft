@@ -54,7 +54,9 @@ public class NarratorService {
         NarratorContext ctx = new NarratorContext(TriggerType.POI_ON_RAIL, "Party")
                 .withRecipient(Recipient.PARTY)
                 .addExtra("narrative", node.narrative)
-                .addExtra("currentNode", node.nodeId);
+                .addExtra("currentNode", node.nodeId)
+                .addExtra("recent_events", String.join("; ",
+                        plugin.getPartySessionStore().getEvents()));
         if (triggerPlayer != null) ctx.addExtra("triggerPlayer", triggerPlayer.getName());
         narrate(ctx);
     }
@@ -62,7 +64,9 @@ public class NarratorService {
     /** Off-rail narration (backward compat). */
     public void narrateOffRail(Player triggerPlayer) {
         NarratorContext ctx = new NarratorContext(TriggerType.POI_OFF_RAIL, "Party")
-                .withRecipient(Recipient.PARTY);
+                .withRecipient(Recipient.PARTY)
+                .addExtra("recent_events", String.join("; ",
+                        plugin.getPartySessionStore().getEvents()));
         if (triggerPlayer != null) ctx.addExtra("triggerPlayer", triggerPlayer.getName());
         narrate(ctx);
     }
@@ -116,7 +120,26 @@ public class NarratorService {
                 String systemPrompt = buildSystemPrompt();
                 String response = plugin.getDeepSeekClient().complete(systemPrompt, prompt);
 
-                Bukkit.getScheduler().runTask(plugin, () -> route(ctx, response));
+                // Parse NARASI + ADVANCE dari response AI
+                String narasi = extractField(response, "NARASI");
+                String advance = extractField(response, "ADVANCE");
+                if (narasi.isEmpty()) narasi = response;
+
+                final String finalNarasi = narasi;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    route(ctx, finalNarasi);
+                    // AUTO mode: pilihkan next node
+                    if (plugin.getPartySessionStore().isAutoMode()
+                            && advance != null && !advance.isEmpty()
+                            && !"NONE".equalsIgnoreCase(advance)) {
+                        var node = plugin.getStoryTreeStore().get(advance);
+                        if (node != null) {
+                            plugin.getPlayerDataStore().setCurrentNode(advance);
+                            plugin.getPartySessionStore().setCurrentNode(advance);
+                            plugin.getLogger().info("[Narrator] Auto-advanced: " + advance);
+                        }
+                    }
+                });
 
             } catch (Exception e) {
                 plugin.getLogger().warning("Narrator failed for " + ctx.triggerType + ": " + e.getMessage());
@@ -164,16 +187,32 @@ public class NarratorService {
     // ==================== PROMPT BUILDING ====================
 
     private String buildSystemPrompt() {
+        boolean isAuto = plugin.getPartySessionStore().getMode()
+                == id.patahgaming.dndplugin.model.NarratorMode.AUTO;
+
         return """
-                You are a Dungeon Master narrating D&D 5e in a fantasy world.
-                - Narrate in present or past tense, second-person
-                - Be concise but evocative (1-3 sentences)
-                - Include sensory details when fitting
-                - Stay consistent with provided context
-                - NEVER change the numbers given — they are final
-                - NEVER break character or mention "the AI" or "the game"
-                - Respond in English
-                """;
+                Kamu adalah narator DnD untuk sesi permainan dalam Minecraft.
+                Gunakan bahasa Indonesia yang natural dan immersive.
+                Istilah fantasy/DnD dalam bahasa Inggris TIDAK diterjemahkan
+                (Sneak Attack, Spell Slot, Saving Throw, dll).
+
+                Aturan narasi:
+                - Maksimal 3 kalimat untuk event biasa
+                - Maksimal 6 kalimat untuk momen penting (boss, plot twist)
+                - JANGAN sebut koordinat atau istilah Minecraft (block, chunk)
+                - Sebut pemain dengan nama karakter mereka, bukan username
+                - Stay in character — jangan break the fourth wall
+
+                %s
+
+                Selalu jawab dalam format EXACT:
+                NARASI: <teks narasi %d-%d kalimat>
+                ADVANCE: <%s>
+                """.formatted(
+                    "Ikuti narrative_template yang diberikan, tambahkan detail kontekstual (waktu, cuaca, posisi).",
+                    1, 3,
+                    isAuto ? "next_node_id dari daftar choices, atau NONE" : "NONE"
+                );
     }
 
     private String buildPrompt(NarratorContext ctx) {
@@ -369,6 +408,17 @@ public class NarratorService {
 
     private String setFallback(NarratorContext ctx, String fb) {
         if (ctx.fallbackTemplate == null) ctx.fallbackTemplate = fb;
+        return "";
+    }
+
+    /** Extract field value from "FIELD: value" format. */
+    private String extractField(String response, String field) {
+        if (response == null) return "";
+        for (String line : response.split("\n")) {
+            if (line.trim().toUpperCase().startsWith(field.toUpperCase() + ":")) {
+                return line.substring(line.indexOf(':') + 1).trim();
+            }
+        }
         return "";
     }
 

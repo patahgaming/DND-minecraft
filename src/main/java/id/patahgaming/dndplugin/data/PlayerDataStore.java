@@ -265,6 +265,11 @@ public class PlayerDataStore {
         return partyCurrentNode;
     }
 
+    /** Direct set for AUTO mode narrator. */
+    public void setCurrentNode(String nodeId) {
+        this.partyCurrentNode = nodeId;
+    }
+
     /**
      * Set party current node. Ini akan menyimpan node baru ke playerNodeProgress
      * untuk semua player yang sedang online, mereset PoiTickTask triggered set,
