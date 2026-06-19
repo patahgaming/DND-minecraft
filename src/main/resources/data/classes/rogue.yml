@@ -1,0 +1,11 @@
+class_id: rogue
+display_name: "Rogue"
+hit_die: 8
+spellcasting_ability: null
+saves: [dex, int]
+armor_proficiency: [light]
+weapon_proficiency: [simple, hand_crossbow, longsword, rapier, shortsword]
+skills: [acrobatics, athletics, deception, insight, intimidation, investigation, perception, sleight_of_hand, stealth]
+skill_choices: 4
+abilities: [sneak_attack, cunning_action]
+spell_slots_by_level: {}

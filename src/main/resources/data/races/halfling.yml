@@ -1,0 +1,9 @@
+race_id: halfling
+display_name: "Lightfoot Halfling"
+ability_bonus:
+  dex: +2
+  cha: +1
+speed: 25
+traits: [lucky, brave, halfling_nimbleness, naturally_stealthy]
+size: small
+languages: [common, halfling]

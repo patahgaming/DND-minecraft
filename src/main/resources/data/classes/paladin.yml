@@ -1,0 +1,11 @@
+class_id: paladin
+display_name: "Paladin"
+hit_die: 10
+spellcasting_ability: cha
+saves: [wis, cha]
+armor_proficiency: [light, medium, heavy, shield]
+weapon_proficiency: [simple, martial]
+skills: [athletics, insight, intimidation, medicine, persuasion, religion]
+skill_choices: 2
+abilities: [divine_sense, lay_on_hands, divine_smite]
+spell_slots_by_level: { "2": { "1": 2 }, "3": { "1": 3 } }

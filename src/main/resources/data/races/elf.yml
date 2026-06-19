@@ -1,0 +1,9 @@
+race_id: elf
+display_name: "High Elf"
+ability_bonus:
+  dex: +2
+  int: +1
+speed: 30
+traits: [darkvision, fey_ancestry, keen_senses]
+size: medium
+languages: [common, elvish]

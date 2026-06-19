@@ -1,0 +1,11 @@
+class_id: druid
+display_name: "Druid"
+hit_die: 8
+spellcasting_ability: wis
+saves: [int, wis]
+armor_proficiency: [light, medium, shield]
+weapon_proficiency: [club, dagger, dart, quarterstaff, scimitar, sickle, sling]
+skills: [arcana, animal_handling, insight, medicine, nature, perception, religion, survival]
+skill_choices: 2
+abilities: [wild_shape, druidic]
+spell_slots_by_level: { "1": { "1": 2 }, "2": { "1": 3 }, "3": { "1": 4, "2": 2 } }

@@ -1,0 +1,11 @@
+class_id: monk
+display_name: "Monk"
+hit_die: 8
+spellcasting_ability: null
+saves: [str, dex]
+armor_proficiency: []
+weapon_proficiency: [simple, shortsword]
+skills: [acrobatics, athletics, history, insight, religion, stealth]
+skill_choices: 2
+abilities: [martial_arts, ki, unarmored_defense]
+spell_slots_by_level: {}

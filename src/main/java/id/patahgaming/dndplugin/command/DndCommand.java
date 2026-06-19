@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class DndCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of("reload", "save", "version", "stop", "start", "mode");
+    private static final List<String> SUBCOMMANDS = List.of("reload", "save", "version", "stop", "start", "mode", "reroll");
 
     private final DndPlugin plugin;
 
@@ -53,7 +53,8 @@ public class DndCommand implements CommandExecutor, TabCompleter {
             case "stop" -> handleStopTick(sender);
             case "start" -> handleStartTick(sender);
             case "mode" -> handleMode(sender, args);
-            default -> sender.sendMessage("§cUnknown subcommand: " + sub + ". Use: reload, save, version, stop, start, mode");
+            case "reroll" -> handleReroll(sender, args);
+            default -> sender.sendMessage("§cUnknown subcommand: " + sub + ". Use: reload, save, version, stop, start, mode, reroll");
         }
 
         return true;
@@ -150,6 +151,22 @@ public class DndCommand implements CommandExecutor, TabCompleter {
         newTask.runTaskTimer(plugin, intervalTicks, intervalTicks);
         plugin.setPoiTickTask(newTask);
         sender.sendMessage("§a[DnD] Tick task started (interval: " + intervalSeconds + "s)");
+    }
+
+    private void handleReroll(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cHanya player.");
+            return;
+        }
+        if (args.length < 2 || !"confirm".equalsIgnoreCase(args[1])) {
+            player.sendMessage("§cReroll akan menghapus karaktermu dan semua progress!");
+            player.sendMessage("§eKetik §f/dnd reroll confirm §euntuk lanjut.");
+            return;
+        }
+        // Reset character
+        plugin.getPlayerDataStore().resetCharacter(player);
+        player.sendMessage("§a🔄 Karakter di-reset. Membuat karakter baru...");
+        plugin.getCharacterCreationManager().giveStageOneBook(player);
     }
 
     private void handleMode(CommandSender sender, String[] args) {

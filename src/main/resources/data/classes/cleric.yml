@@ -1,0 +1,11 @@
+class_id: cleric
+display_name: "Cleric"
+hit_die: 8
+spellcasting_ability: wis
+saves: [wis, cha]
+armor_proficiency: [light, medium, shield]
+weapon_proficiency: [simple]
+skills: [history, insight, medicine, persuasion, religion]
+skill_choices: 2
+abilities: [channel_divinity, turn_undead]
+spell_slots_by_level: { "1": { "1": 2 }, "2": { "1": 3 }, "3": { "1": 4, "2": 2 } }

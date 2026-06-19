@@ -1,0 +1,9 @@
+race_id: dwarf
+display_name: "Hill Dwarf"
+ability_bonus:
+  con: +2
+  wis: +1
+speed: 25
+traits: [darkvision, dwarven_resilience, dwarven_toughness]
+size: medium
+languages: [common, dwarvish]

@@ -1,0 +1,9 @@
+race_id: half_orc
+display_name: "Half-Orc"
+ability_bonus:
+  str: +2
+  con: +1
+speed: 30
+traits: [darkvision, relentless_endurance, savage_attacks]
+size: medium
+languages: [common, orc]

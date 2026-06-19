@@ -1,0 +1,11 @@
+class_id: fighter
+display_name: "Fighter"
+hit_die: 10
+spellcasting_ability: null
+saves: [str, con]
+armor_proficiency: [light, medium, heavy, shield]
+weapon_proficiency: [simple, martial]
+skills: [acrobatics, animal_handling, athletics, history, insight, intimidation, perception, survival]
+skill_choices: 2
+abilities: [second_wind, action_surge]
+spell_slots_by_level: {}

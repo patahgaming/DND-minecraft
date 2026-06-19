@@ -1,0 +1,11 @@
+class_id: bard
+display_name: "Bard"
+hit_die: 8
+spellcasting_ability: cha
+saves: [dex, cha]
+armor_proficiency: [light]
+weapon_proficiency: [simple, hand_crossbow, longsword, rapier, shortsword]
+skills: [any]
+skill_choices: 3
+abilities: [bardic_inspiration, jack_of_all_trades]
+spell_slots_by_level: { "1": { "1": 2 }, "2": { "1": 3 }, "3": { "1": 4, "2": 2 } }

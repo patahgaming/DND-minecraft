@@ -1,0 +1,13 @@
+race_id: human
+display_name: "Human"
+ability_bonus:
+  str: +1
+  dex: +1
+  con: +1
+  int: +1
+  wis: +1
+  cha: +1
+speed: 30
+traits: []
+size: medium
+languages: [common]

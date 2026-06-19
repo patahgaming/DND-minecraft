@@ -1,0 +1,11 @@
+class_id: ranger
+display_name: "Ranger"
+hit_die: 10
+spellcasting_ability: wis
+saves: [str, dex]
+armor_proficiency: [light, medium, shield]
+weapon_proficiency: [simple, martial]
+skills: [animal_handling, athletics, insight, investigation, nature, perception, stealth, survival]
+skill_choices: 3
+abilities: [favored_enemy, natural_explorer]
+spell_slots_by_level: { "2": { "1": 2 }, "3": { "1": 3 } }

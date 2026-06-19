@@ -1,0 +1,11 @@
+class_id: sorcerer
+display_name: "Sorcerer"
+hit_die: 6
+spellcasting_ability: cha
+saves: [con, cha]
+armor_proficiency: []
+weapon_proficiency: [dagger, dart, sling, quarterstaff, light_crossbow]
+skills: [arcana, deception, insight, intimidation, persuasion, religion]
+skill_choices: 2
+abilities: [sorcery_points, metamagic]
+spell_slots_by_level: { "1": { "1": 2 }, "2": { "1": 3 }, "3": { "1": 4, "2": 2 } }

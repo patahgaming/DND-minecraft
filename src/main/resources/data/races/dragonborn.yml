@@ -1,0 +1,9 @@
+race_id: dragonborn
+display_name: "Dragonborn"
+ability_bonus:
+  str: +2
+  cha: +1
+speed: 30
+traits: [draconic_ancestry, breath_weapon, damage_resistance]
+size: medium
+languages: [common, draconic]

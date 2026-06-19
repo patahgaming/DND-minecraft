@@ -1,0 +1,9 @@
+race_id: tiefling
+display_name: "Tiefling"
+ability_bonus:
+  int: +1
+  cha: +2
+speed: 30
+traits: [darkvision, hellish_resistance, infernal_legacy]
+size: medium
+languages: [common, infernal]
