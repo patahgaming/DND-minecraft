@@ -42,7 +42,7 @@ public class DiceBlockListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDicePlace(PlayerInteractEvent event) {
-        // Handle dice placement (RIGHT_CLICK_BLOCK)
+        // Handle dice placement (RIGHT_CLICK_BLOCK) — Java Edition
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             Player player = event.getPlayer();
             ItemStack item = event.getItem();
@@ -50,7 +50,7 @@ public class DiceBlockListener implements Listener {
 
             // Dice item → play dice animation
             if (isDiceItem(item)) {
-                handleDicePlace(event, player, item);
+                handleDicePlace(event, player, item, event.getClickedBlock().getLocation());
                 return;
             }
 
@@ -61,19 +61,31 @@ public class DiceBlockListener implements Listener {
             }
         }
 
-        // Handle consumable right-click air
+        // Handle dice RIGHT_CLICK_AIR — Bedrock Edition fallback
+        // (Bedrock Adventure mode doesn't send RIGHT_CLICK_BLOCK for block items)
         if (event.getAction() == Action.RIGHT_CLICK_AIR) {
             Player player = event.getPlayer();
             ItemStack item = event.getItem();
             if (item == null) return;
 
+            // Dice item → play dice animation (click air = use player location)
+            if (isDiceItem(item)) {
+                handleDicePlace(event, player, item, player.getLocation().add(0, -0.5, 0));
+                return;
+            }
+
+            // Consumable item → drink/eat
             if (isConsumable(item)) {
                 handleConsumableUse(event, player, item);
             }
         }
     }
 
-    private void handleDicePlace(PlayerInteractEvent event, Player player, ItemStack item) {
+    /**
+     * Handle dice roll — works for both RIGHT_CLICK_BLOCK (Java) and RIGHT_CLICK_AIR (Bedrock fallback).
+     * @param spawnLoc location to spawn the dice animation (block surface for Java, player feet for Bedrock)
+     */
+    private void handleDicePlace(PlayerInteractEvent event, Player player, ItemStack item, Location spawnLoc) {
         // Cancel interaction — jangan taruh wool beneran (Adventure mode compat)
         event.setCancelled(true);
 
@@ -88,8 +100,12 @@ public class DiceBlockListener implements Listener {
         }
 
         // Play dice animation dengan SNAPSHOT (masih punya amount + PDC valid)
-        Location diceLoc = event.getClickedBlock().getLocation().add(0.5, 0, 0.5);
-        playDiceAnimation(player, diceLoc, diceSnapshot);
+        playDiceAnimation(player, spawnLoc, diceSnapshot);
+
+        // Feedback ke player (Bedrock players butuh tau dadu sedang di-roll)
+        DiceType placedDice = DiceItemFactory.getDiceType(diceSnapshot);
+        String diceLabel = placedDice != null ? placedDice.getLabel() : "?";
+        player.sendActionBar("§e🎲 Rolling " + diceLabel + "...");
     }
 
     /**

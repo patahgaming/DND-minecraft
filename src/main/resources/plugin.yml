@@ -42,3 +42,6 @@ commands:
   poi:
     description: POI management (define, confirm, cancel, list, info, tree)
     usage: /poi <define|confirm|cancel|list|info|tree>
+  dice:
+    description: Roll dadu di tangan (fallback untuk Bedrock)
+    usage: /dice

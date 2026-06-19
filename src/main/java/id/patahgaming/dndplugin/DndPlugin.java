@@ -8,6 +8,7 @@ import id.patahgaming.dndplugin.command.BattleCommand;
 import id.patahgaming.dndplugin.command.CastCommand;
 import id.patahgaming.dndplugin.command.CharacterCommand;
 import id.patahgaming.dndplugin.command.DeleteNpcCommand;
+import id.patahgaming.dndplugin.command.DiceCommand;
 import id.patahgaming.dndplugin.command.DndCommand;
 import id.patahgaming.dndplugin.command.NewNpcCommand;
 import id.patahgaming.dndplugin.command.RollCommand;
@@ -152,6 +153,9 @@ public final class DndPlugin extends JavaPlugin {
         PoiCommand poiCommand = new PoiCommand(this);
         getCommand("poi").setExecutor(poiCommand);
         getCommand("poi").setTabCompleter(poiCommand);
+        DiceCommand diceCommand = new DiceCommand(this);
+        getCommand("dice").setExecutor(diceCommand);
+        getCommand("dice").setTabCompleter(diceCommand);
 
         getLogger().info("DnD AI System enabled.");
     }
