@@ -28,8 +28,8 @@ commands:
     description: Hapus NPC (remove data + kill entity)
     usage: /deletenpc <npc_id>
   battle:
-    description: Battle commands (start, flee, status)
-    usage: /battle <start|flee|status>
+    description: Battle commands (start, flee, status, forceend)
+    usage: /battle <start|flee|status|forceend>
   character:
     description: Character creation and info
     usage: /character <create|info> [class] [name] [race]

@@ -17,11 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /battle <start|flee|status>
+ * /battle <start|flee|status|forceend>
  *
- * start  — inisiasi battle dengan mobs di sekitar player (radius 15 block)
- * flee   — coba kabur dari battle (DEX check)
- * status — lihat status battle saat ini
+ * start    — inisiasi battle dengan mobs di sekitar player (radius 15 block)
+ * flee     — coba kabur dari battle (DEX check)
+ * status   — lihat status battle saat ini
+ * forceend — force-stop battle (admin debug softlock guard)
  */
 public class BattleCommand implements CommandExecutor, TabCompleter {
 
@@ -40,7 +41,7 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            player.sendMessage("§eGunakan: /battle <start|flee|status>");
+            player.sendMessage("§eGunakan: /battle <start|flee|status|forceend>");
             return true;
         }
 
@@ -49,7 +50,8 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
             case "start" -> handleStart(player);
             case "flee" -> handleFlee(player);
             case "status" -> handleStatus(player);
-            default -> player.sendMessage("§cUnknown: " + sub + ". Use: start, flee, status");
+            case "forceend" -> handleForceEnd(player);
+            default -> player.sendMessage("§cUnknown: " + sub + ". Use: start, flee, status, forceend");
         }
         return true;
     }
@@ -121,6 +123,21 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    /**
+     * Force-stop battle — jaga-jaga softlock.
+     * Unfreeze semua mob, stabilize unconscious players, clear state.
+     */
+    private void handleForceEnd(Player player) {
+        TurnManager tm = plugin.getTurnManager();
+        if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
+            player.sendMessage("§7Tidak ada battle aktif untuk di-force end.");
+            return;
+        }
+        tm.endBattle();
+        Bukkit.broadcastMessage("§e⚔ Battle di-force end oleh " + player.getName() + ".");
+        plugin.getLogger().warning("[Battle] Force-ended by " + player.getName());
+    }
+
     private void handleStatus(Player player) {
         TurnManager tm = plugin.getTurnManager();
         if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
@@ -150,7 +167,7 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subs = new ArrayList<>();
-            for (String s : List.of("start", "flee", "status")) {
+            for (String s : List.of("start", "flee", "status", "forceend")) {
                 if (s.startsWith(input)) subs.add(s);
             }
             return subs;
