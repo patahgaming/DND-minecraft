@@ -311,20 +311,20 @@ Ranged: d20 + DEX mod + prof → vs target AC
 - **Nat 20**: Auto-hit + **CRITICAL** (damage dice digandakan)
 - **Nat 1**: Auto-miss
 
-### 5.4 Armor Class (AC)
+### 5.4 Armor Class (AC) — First-Campaign Balanced
 
 | Target | AC |
 |--------|-----|
 | Player | **10 + DEX modifier** |
-| Zombie | 8 |
-| Skeleton | 13 |
-| Spider | 14 |
-| Creeper | 12 |
-| Enderman | 15 |
-| Pillager / Vindicator | 15 |
-| Witch / Evoker | 12 |
-| **Iron Golem** | **20** |
-| Villager | 10 |
+| Zombie | 6 |
+| Skeleton | 11 |
+| Spider | 12 |
+| Creeper | 10 |
+| Enderman | 13 |
+| Pillager / Vindicator | 13 |
+| Witch / Evoker | 10 |
+| **Iron Golem** | **18** |
+| Villager | 8 |
 
 ### 5.5 Damage Types & Resistance/Vulnerability
 
@@ -1172,19 +1172,19 @@ Ini akan reload **semua**: config, story tree, NPC, POI, item, spell, race, clas
 
 | Entity Type | AC |
 |-------------|-----|
-| **Iron Golem** | 20 |
-| Enderman | 15 |
-| Pillager | 15 |
-| Vindicator | 15 |
-| Spider | 14 |
-| Skeleton | 13 |
-| Creeper | 12 |
-| Witch | 12 |
-| Evoker | 12 |
-| Villager | 10 |
-| Wandering Trader | 10 |
-| **Zombie** | 8 |
-| Other | 10 |
+| **Iron Golem** | 18 |
+| Enderman | 13 |
+| Pillager | 13 |
+| Vindicator | 13 |
+| Spider | 12 |
+| Skeleton | 11 |
+| Creeper | 10 |
+| Witch | 10 |
+| Evoker | 10 |
+| Villager | 8 |
+| Wandering Trader | 8 |
+| **Zombie** | 6 |
+| Other | 8 |
 
 ### 17.4 Mob Attack Stats (AI)
 

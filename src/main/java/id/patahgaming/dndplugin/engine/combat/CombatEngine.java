@@ -99,20 +99,20 @@ public class CombatEngine {
         return ac != null ? ac : 0;
     }
 
-    /** Mob AC = natural armor (based on mob type) */
+    /** Mob AC = natural armor (based on mob type) — lowered by 2 for first-campaign fun factor */
     public static int calculateMobAC(LivingEntity mob) {
         return switch (mob.getType()) {
-            case ZOMBIE -> 8;
-            case SKELETON -> 13;
-            case SPIDER -> 14;
-            case CREEPER -> 12;
-            case ENDERMAN -> 15;
-            case WITCH -> 12;
-            case PILLAGER, VINDICATOR -> 15;
-            case EVOKER -> 12;
-            case IRON_GOLEM -> 20;
-            case VILLAGER, WANDERING_TRADER -> 10;
-            default -> 10;
+            case ZOMBIE -> 6;       // was 8  — trash mob, should be easy
+            case SKELETON -> 11;    // was 13
+            case SPIDER -> 12;      // was 14
+            case CREEPER -> 10;     // was 12
+            case ENDERMAN -> 13;    // was 15
+            case WITCH -> 10;       // was 12
+            case PILLAGER, VINDICATOR -> 13; // was 15
+            case EVOKER -> 10;      // was 12
+            case IRON_GOLEM -> 18;  // was 20 — still tough but hittable
+            case VILLAGER, WANDERING_TRADER -> 8; // was 10
+            default -> 8;           // was 10
         };
     }
 
