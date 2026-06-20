@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * /atk <melee|ranged> [target]
@@ -136,12 +137,15 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
     }
 
     private LivingEntity findTarget(TurnManager tm, String partial) {
+        UUID attackerUuid = null; // filled below for PvP check
         for (var entry : tm.getParticipants().entrySet()) {
             LivingEntity e = entry.getValue();
-            if (e instanceof Player) continue;
+            // PvE: skip players. PvP: skip players on same team.
+            if (e instanceof Player && !tm.isPvP()) continue;
             String idStr = entry.getKey().toString().substring(0, 8);
+            String name = e.getName() != null ? e.getName() : "";
             if (idStr.toLowerCase().startsWith(partial.toLowerCase())
-                    || (e.getName() != null && e.getName().toLowerCase().contains(partial.toLowerCase()))) {
+                    || name.toLowerCase().contains(partial.toLowerCase())) {
                 return e;
             }
         }
@@ -150,18 +154,28 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
 
     private void listTargets(TurnManager tm, Player player) {
         for (var entry : tm.getParticipants().entrySet()) {
-            if (entry.getValue() instanceof Player) continue;
+            LivingEntity e = entry.getValue();
+            // PvE: skip players. PvP: skip players on same team.
+            if (e instanceof Player targetPlayer) {
+                if (!tm.isPvP()) continue;
+                if (tm.isSameTeam(player.getUniqueId(), targetPlayer.getUniqueId())) continue;
+            }
             String id = entry.getKey().toString().substring(0, 8);
-            String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
-            int hp = (int) entry.getValue().getHealth();
-            player.sendMessage("  §e" + id + " §7→ " + name + " §c[" + hp + " HP]");
+            String name = e.getName() != null ? e.getName() : "?";
+            int hp = (int) e.getHealth();
+            String prefix = (e instanceof Player) ? "§b" : "§e";
+            player.sendMessage("  " + prefix + id + " §7→ " + name + " §c[" + hp + " HP]");
         }
     }
 
     private LivingEntity findFirstMobTarget(TurnManager tm) {
         for (var entry : tm.getParticipants().entrySet()) {
-            if (!(entry.getValue() instanceof Player)) {
-                return entry.getValue();
+            LivingEntity e = entry.getValue();
+            // PvE: return first non-player. PvP: return first non-self player (enemy)
+            if (tm.isPvP()) {
+                if (e instanceof Player) return e; // any other player = enemy team
+            } else {
+                if (!(e instanceof Player)) return e;
             }
         }
         return null;
@@ -233,11 +247,15 @@ public class AtkCommand implements CommandExecutor, TabCompleter {
             List<String> targets = new ArrayList<>();
             String input = args[1].toLowerCase();
             for (var entry : tm.getParticipants().entrySet()) {
-                if (entry.getValue() instanceof Player) continue;
+                LivingEntity e = entry.getValue();
+                // PvE: skip players. PvP: include enemy players.
+                if (e instanceof Player) {
+                    if (!tm.isPvP()) continue;
+                }
                 String id = entry.getKey().toString().substring(0, 8);
-                String name = entry.getValue().getName() != null ? entry.getValue().getName() : "?";
+                String name = e.getName() != null ? e.getName() : "?";
                 if (id.toLowerCase().startsWith(input) || name.toLowerCase().contains(input)) {
-                    targets.add(id);  // UUID prefix — unique per entity
+                    targets.add(id);
                 }
             }
             return targets;

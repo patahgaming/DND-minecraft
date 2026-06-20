@@ -17,12 +17,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /battle <start|flee|status|forceend>
+ * /battle <start|flee|status|forceend|duel|pvp>
  *
- * start    — inisiasi battle dengan mobs di sekitar player (radius 15 block)
+ * start    — inisiasi PvE battle dengan mobs di sekitar player (radius 15 block)
  * flee     — coba kabur dari battle (DEX check)
  * status   — lihat status battle saat ini
  * forceend — force-stop battle (admin debug softlock guard)
+ * duel <player> — 1v1 PvP duel melawan player lain
+ * pvp <ally> <enemy1> [enemy2...] — team PvP (sender + ally vs enemies)
  */
 public class BattleCommand implements CommandExecutor, TabCompleter {
 
@@ -41,7 +43,7 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            player.sendMessage("§eGunakan: /battle <start|flee|status|forceend>");
+            player.sendMessage("§eGunakan: /battle <start|flee|status|forceend|duel|pvp>");
             return true;
         }
 
@@ -51,7 +53,9 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
             case "flee" -> handleFlee(player);
             case "status" -> handleStatus(player);
             case "forceend" -> handleForceEnd(player);
-            default -> player.sendMessage("§cUnknown: " + sub + ". Use: start, flee, status, forceend");
+            case "duel" -> handleDuel(player, args);
+            case "pvp" -> handlePvP(player, args);
+            default -> player.sendMessage("§cUnknown: " + sub + ". Use: start, flee, status, forceend, duel, pvp");
         }
         return true;
     }
@@ -138,6 +142,91 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         plugin.getLogger().warning("[Battle] Force-ended by " + player.getName());
     }
 
+    /** /battle duel <player> — 1v1 PvP duel. */
+    private void handleDuel(Player challenger, String[] args) {
+        TurnManager tm = plugin.getTurnManager();
+        if (tm.getBattleState() == TurnManager.BattleState.ACTIVE) {
+            challenger.sendMessage("§cBattle sudah berlangsung! " + tm.getCurrentTurnDisplay());
+            return;
+        }
+
+        if (args.length < 2) {
+            challenger.sendMessage("§e/battle duel <player> §7— tantang player lain duel 1v1");
+            return;
+        }
+
+        Player opponent = Bukkit.getPlayer(args[1]);
+        if (opponent == null) {
+            challenger.sendMessage("§cPlayer tidak ditemukan: " + args[1]);
+            return;
+        }
+        if (opponent.equals(challenger)) {
+            challenger.sendMessage("§cKamu tidak bisa duel dengan diri sendiri!");
+            return;
+        }
+
+        // Mulai duel
+        tm.startDuel(challenger, opponent);
+
+        challenger.sendMessage("§aGunakan §e/atk melee §aatau §e/atk ranged §auntuk menyerang!");
+        challenger.sendMessage("§7Lihat turn order: §e/battle status");
+    }
+
+    /** /battle pvp <ally> <enemy1> [enemy2...] — team PvP.
+     *  Sender + ally = team 1, enemies = team 2. */
+    private void handlePvP(Player sender, String[] args) {
+        TurnManager tm = plugin.getTurnManager();
+        if (tm.getBattleState() == TurnManager.BattleState.ACTIVE) {
+            sender.sendMessage("§cBattle sudah berlangsung! " + tm.getCurrentTurnDisplay());
+            return;
+        }
+
+        if (args.length < 3) {
+            sender.sendMessage("§e/battle pvp <ally> <enemy1> [enemy2...]");
+            sender.sendMessage("§7Contoh: /battle pvp Aric Lyra → kamu + Aric vs Lyra (2v1)");
+            sender.sendMessage("§7Contoh: /battle pvp Aric Lyra Mira → kamu + Aric vs Lyra + Mira (2v2)");
+            return;
+        }
+
+        // Parse teams: sender + ally = team 1, enemies = team 2
+        List<Player> team1 = new ArrayList<>();
+        team1.add(sender);
+
+        Player ally = Bukkit.getPlayer(args[1]);
+        if (ally != null && !ally.equals(sender)) {
+            team1.add(ally);
+        } else if (ally == null) {
+            sender.sendMessage("§cAlly tidak ditemukan: " + args[1]);
+            return;
+        }
+
+        List<Player> team2 = new ArrayList<>();
+        for (int i = 2; i < args.length; i++) {
+            Player enemy = Bukkit.getPlayer(args[i]);
+            if (enemy == null) {
+                sender.sendMessage("§cPlayer tidak ditemukan: " + args[i]);
+                return;
+            }
+            if (enemy.equals(sender) || team1.contains(enemy)) {
+                sender.sendMessage("§cPlayer tidak bisa di dua team sekaligus: " + args[i]);
+                return;
+            }
+            team2.add(enemy);
+        }
+
+        if (team2.isEmpty()) {
+            sender.sendMessage("§cMinimal 1 musuh dibutuhkan!");
+            return;
+        }
+
+        // Build team list for TurnManager
+        List<List<Player>> teams = List.of(team1, team2);
+        tm.startPvPBattle(teams);
+
+        sender.sendMessage("§aGunakan §e/atk melee §aatau §e/atk ranged §auntuk menyerang!");
+        sender.sendMessage("§7Lihat turn order: §e/battle status");
+    }
+
     private void handleStatus(Player player) {
         TurnManager tm = plugin.getTurnManager();
         if (tm.getBattleState() != TurnManager.BattleState.ACTIVE) {
@@ -167,10 +256,21 @@ public class BattleCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String input = args[0].toLowerCase();
             List<String> subs = new ArrayList<>();
-            for (String s : List.of("start", "flee", "status", "forceend")) {
+            for (String s : List.of("start", "flee", "status", "forceend", "duel", "pvp")) {
                 if (s.startsWith(input)) subs.add(s);
             }
             return subs;
+        }
+        // Player name completion for duel and pvp
+        if (args.length >= 2 && (args[0].equalsIgnoreCase("duel") || args[0].equalsIgnoreCase("pvp"))) {
+            String input = args[args.length - 1].toLowerCase();
+            List<String> names = new ArrayList<>();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (!p.equals(sender) && p.getName().toLowerCase().startsWith(input)) {
+                    names.add(p.getName());
+                }
+            }
+            return names;
         }
         return List.of();
     }

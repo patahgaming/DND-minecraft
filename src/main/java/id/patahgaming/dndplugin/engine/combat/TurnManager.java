@@ -42,6 +42,11 @@ public class TurnManager {
 
     private final Map<UUID, LivingEntity> participants = new HashMap<>();
 
+    // PvP: team assignment — 0 = party (default PvE), 1+ = PvP teams
+    // null entry = team 0 (party). During PvP, players are on different teams.
+    private final Map<UUID, Integer> teamAssignments = new HashMap<>();
+    private boolean isPvP = false;
+
     // DeathSaveManager — di-inject dari DndPlugin
     private DeathSaveManager deathSaveManager;
 
@@ -96,6 +101,118 @@ public class TurnManager {
         Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
 
         return turnOrder;
+    }
+
+    // ==================== PVP BATTLE ====================
+
+    /**
+     * Mulai duel 1v1 antara dua player. PvP mode: 2 teams.
+     */
+    public List<InitiativeRoller.InitiativeEntry> startDuel(Player challenger, Player opponent) {
+        participants.clear();
+        teamAssignments.clear();
+        isPvP = true;
+
+        List<LivingEntity> fighters = List.of(challenger, opponent);
+        for (LivingEntity e : fighters) {
+            participants.put(e.getUniqueId(), e);
+        }
+
+        // Team assignment: challenger = team 1, opponent = team 2
+        teamAssignments.put(challenger.getUniqueId(), 1);
+        teamAssignments.put(opponent.getUniqueId(), 2);
+
+        turnOrder.clear();
+        turnOrder.addAll(InitiativeRoller.rollInitiative(plugin, fighters));
+
+        currentTurnIndex = -1;
+        roundNumber = 1;
+        battleState = BattleState.ACTIVE;
+        combatState = CombatState.WAITING_TURN;
+
+        // Broadcast
+        Bukkit.broadcastMessage("§c§l⚔ PvP DUEL! ⚔§r");
+        Bukkit.broadcastMessage("§c" + challenger.getName() + " §7vs §c" + opponent.getName());
+        Bukkit.broadcastMessage("§7Initiative:");
+        for (int i = 0; i < turnOrder.size(); i++) {
+            var e = turnOrder.get(i);
+            Bukkit.broadcastMessage("§e  " + (i + 1) + ". " + e.displayName + " §7(" + e.total + ")");
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
+        plugin.getLogger().info("[PvP] Duel started: " + challenger.getName() + " vs " + opponent.getName());
+        return turnOrder;
+    }
+
+    /**
+     * Mulai PvP team battle. Setiap list Player adalah satu team.
+     * Contoh: [[attacker1, attacker2], [defender]] = 2v1
+     */
+    public List<InitiativeRoller.InitiativeEntry> startPvPBattle(List<List<Player>> teams) {
+        participants.clear();
+        teamAssignments.clear();
+        isPvP = true;
+
+        List<LivingEntity> allFighters = new ArrayList<>();
+        for (int t = 0; t < teams.size(); t++) {
+            for (Player p : teams.get(t)) {
+                participants.put(p.getUniqueId(), p);
+                teamAssignments.put(p.getUniqueId(), t + 1); // team 1, 2, 3...
+                allFighters.add(p);
+            }
+        }
+
+        if (allFighters.size() < 2) {
+            battleState = BattleState.INACTIVE;
+            isPvP = false;
+            return List.of();
+        }
+
+        turnOrder.clear();
+        turnOrder.addAll(InitiativeRoller.rollInitiative(plugin, allFighters));
+
+        currentTurnIndex = -1;
+        roundNumber = 1;
+        battleState = BattleState.ACTIVE;
+        combatState = CombatState.WAITING_TURN;
+
+        // Build team display
+        StringBuilder teamInfo = new StringBuilder();
+        for (int t = 0; t < teams.size(); t++) {
+            if (t > 0) teamInfo.append(" §7vs ");
+            teamInfo.append("§c");
+            teamInfo.append(String.join("§7, §c", teams.get(t).stream().map(Player::getName).toList()));
+        }
+
+        Bukkit.broadcastMessage("§c§l⚔ PvP BATTLE! ⚔§r");
+        Bukkit.broadcastMessage(teamInfo.toString());
+        Bukkit.broadcastMessage("§7Initiative:");
+        for (int i = 0; i < turnOrder.size(); i++) {
+            var e = turnOrder.get(i);
+            Bukkit.broadcastMessage("§e  " + (i + 1) + ". " + e.displayName + " §7(" + e.total + ")");
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, this::nextTurn, 20L);
+        plugin.getLogger().info("[PvP] Team battle started");
+        return turnOrder;
+    }
+
+    /** Check apakah dua entity di team yang sama. */
+    public boolean isSameTeam(UUID a, UUID b) {
+        if (!isPvP) return true; // PvE: all players same party
+        Integer teamA = teamAssignments.get(a);
+        Integer teamB = teamAssignments.get(b);
+        if (teamA == null || teamB == null) return true; // unassigned = same side
+        return teamA.equals(teamB);
+    }
+
+    /** Check apakah ini battle PvP. */
+    public boolean isPvP() { return isPvP; }
+
+    /** Dapatkan team ID untuk entity (1+ = PvP team, 0/null = party). */
+    public int getTeam(UUID uuid) {
+        Integer t = teamAssignments.get(uuid);
+        return t != null ? t : 0;
     }
 
     // ==================== NEXT TURN — PATCHED ====================
@@ -320,7 +437,11 @@ public class TurnManager {
 
     /** Cek apakah battle harus berakhir. */
     private boolean checkBattleEnd() {
-        // PATCH: player unconscious ≠ dead
+        if (isPvP) {
+            return checkPvPBattleEnd();
+        }
+
+        // PvE: player unconscious ≠ dead
         long consciousPlayerCount = participants.values().stream()
                 .filter(e -> e instanceof Player && !e.isDead())
                 .filter(e -> {
@@ -338,6 +459,28 @@ public class TurnManager {
                 .allMatch(LivingEntity::isDead);
 
         return allPlayersDead || allMobsDead || participants.size() <= 1;
+    }
+
+    /**
+     * PvP battle end: kalau semua conscious player di satu team mati/unconscious,
+     * team lawan menang.
+     */
+    private boolean checkPvPBattleEnd() {
+        // Kumpulin alive/conscious players per team
+        Map<Integer, Boolean> teamHasAlive = new java.util.LinkedHashMap<>();
+        for (var entry : participants.entrySet()) {
+            if (!(entry.getValue() instanceof Player p)) continue;
+            int team = getTeam(entry.getKey());
+            boolean alive = !p.isDead()
+                    && (deathSaveManager == null || !deathSaveManager.isUnconscious(p));
+            teamHasAlive.merge(team, alive, (a, b) -> a || b);
+        }
+
+        // Hitung team yang masih punya player alive
+        long aliveTeams = teamHasAlive.values().stream().filter(v -> v).count();
+
+        // Battle end kalau 1 atau 0 team tersisa
+        return aliveTeams <= 1 || participants.size() <= 1;
     }
 
     /** Akhiri battle — unfreeze semua mob yang selamat. */
@@ -358,16 +501,53 @@ public class TurnManager {
             }
         }
 
+        // PvP winner announcement
+        if (isPvP) {
+            int winningTeam = findWinningTeam();
+            if (winningTeam > 0) {
+                // Cari nama team yang menang
+                List<String> winners = new ArrayList<>();
+                for (var entry : teamAssignments.entrySet()) {
+                    if (entry.getValue() == winningTeam) {
+                        LivingEntity e = participants.get(entry.getKey());
+                        if (e instanceof Player p) winners.add(p.getName());
+                    }
+                }
+                Bukkit.broadcastMessage("§6§l🏆 Team " + String.join(", ", winners) + " wins! 🏆§r");
+            } else {
+                Bukkit.broadcastMessage("§7§l⚔ PvP Battle Ended — Draw! ⚔§r");
+            }
+            isPvP = false;
+            teamAssignments.clear();
+        }
+
         battleState = BattleState.INACTIVE;
         combatState = CombatState.WAITING_TURN;
         turnOrder.clear();
         participants.clear();
+        teamAssignments.clear();
         currentTurnIndex = 0;
         roundNumber = 0;
+        isPvP = false;
 
         Bukkit.getOnlinePlayers().forEach(p ->
                 p.sendMessage("§a§l=== Battle Ended ===§r"));
         plugin.getLogger().info("Battle ended.");
+    }
+
+    /** Cari team yang masih punya player alive (untuk PvP winner). */
+    private int findWinningTeam() {
+        Map<Integer, Boolean> teamAlive = new java.util.LinkedHashMap<>();
+        for (var entry : participants.entrySet()) {
+            if (entry.getValue() instanceof Player p && !p.isDead()) {
+                int team = getTeam(entry.getKey());
+                teamAlive.put(team, true);
+            }
+        }
+        if (teamAlive.size() == 1) {
+            return teamAlive.keySet().iterator().next();
+        }
+        return 0; // draw / multiple teams still alive
     }
 
     /** Hapus participant dari battle (mati / kabur). */
