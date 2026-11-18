@@ -2,8 +2,6 @@ package id.patahgaming.dndplugin.creation;
 
 import id.patahgaming.dndplugin.DndPlugin;
 import id.patahgaming.dndplugin.dice.DiceRoller;
-import id.patahgaming.dndplugin.listener.CombatListener;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -170,11 +168,8 @@ public class CharacterCreationManager {
         player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(maxHp);
         player.setHealth(maxHp);
 
-        // Tampilkan character name + HP bar di atas player
-        player.setDisplayName(charName);
-        player.setPlayerListName("§b" + charName);
-        Bukkit.getScheduler().runTaskLater(plugin,
-                () -> CombatListener.updateHpBar(player), 5L);
+        // Terapkan character name ke nametag, chat, dan tab list
+        plugin.getPlayerDataStore().applyCharacterName(player);
 
         return true;
     }

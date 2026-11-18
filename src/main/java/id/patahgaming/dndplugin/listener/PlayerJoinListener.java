@@ -42,6 +42,8 @@ public class PlayerJoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         plugin.getPlayerDataStore().initIfAbsent(player);
+        // Display name & tab list name tidak persist antar session — terapkan ulang
+        plugin.getPlayerDataStore().applyCharacterName(player);
         ScoreboardManager.showCharacterSheet(plugin, player);
 
         // Dice starter pack — sekali aja

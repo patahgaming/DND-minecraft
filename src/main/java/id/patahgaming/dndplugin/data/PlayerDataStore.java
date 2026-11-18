@@ -140,6 +140,9 @@ public class PlayerDataStore {
         player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).setBaseValue(maxHP);
         player.setHealth(maxHP);
 
+        // Ubah nama player sesuai character name (nametag, chat, tab list)
+        applyCharacterName(player);
+
         // Log
         plugin.getLogger().info("Character created: " + charName + " (Lv1 " + charClass.getDisplayName() + ")");
         player.sendMessage("§a§lCharacter Created!");
@@ -147,6 +150,28 @@ public class PlayerDataStore {
         player.sendMessage("§7  HP: " + maxHP + " | Primary: " + primary.toUpperCase());
         player.sendMessage("§7  STR:" + scores.get("str") + " DEX:" + scores.get("dex") + " CON:" + scores.get("con")
                 + " INT:" + scores.get("int") + " WIS:" + scores.get("wis") + " CHA:" + scores.get("cha"));
+    }
+
+    /**
+     * Terapkan character name ke nama player:
+     *  - nametag di atas kepala (character name + HP bar via CombatListener)
+     *  - nama di chat (display name)
+     *  - nama di tab list
+     *
+     * Display name & player list name TIDAK tersimpan otomatis oleh server,
+     * jadi method ini dipanggil setelah pick/create karakter DAN setiap join.
+     * Tidak melakukan apa-apa kalau player belum punya character name.
+     */
+    public void applyCharacterName(Player player) {
+        String charName = player.getPersistentDataContainer()
+                .get(KEY_CHAR_NAME, PersistentDataType.STRING);
+        if (charName == null || charName.isBlank()) return;
+
+        player.setDisplayName(charName);
+        player.setPlayerListName("§b" + charName);
+
+        // Nametag di atas kepala: character name + HP bar
+        id.patahgaming.dndplugin.listener.CombatListener.updateHpBar(player);
     }
 
     /**
